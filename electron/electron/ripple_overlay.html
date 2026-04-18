@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenTap Ripple Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0); /* Transparent */
+            user-select: none;
+            -webkit-app-region: no-drag;
+        }
+
+        #wash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, rgba(255, 192, 203, 0.6) 0%, rgba(255, 160, 180, 0.45) 50%, rgba(255, 140, 160, 0) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease-out;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div id="wash"></div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+
+        // Parse coordinates from URL
+        const params = new URLSearchParams(window.location.search);
+        const screenX = parseFloat(params.get('x')) || window.innerWidth / 2;
+        const screenY = parseFloat(params.get('y')) || window.innerHeight / 2;
+
+        const wash = document.getElementById('wash');
+        
+        // 1. Trigger Pink Wash
+        setTimeout(() => {
+            wash.style.opacity = '1';
+            setTimeout(() => {
+                wash.style.opacity = '0';
+            }, 800);
+        }, 50);
+
+        // 2. Setup Three.js Ripple
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const geometry = new THREE.PlaneGeometry(2, 2);
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                u_time: { value: 0 },
+                u_center: { value: new THREE.Vector2(screenX / window.innerWidth, 1.0 - (screenY / window.innerHeight)) },
+                u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float u_time;
+                uniform vec2 u_center;
+                uniform vec2 u_resolution;
+                varying vec2 vUv;
+
+                void main() {
+                    float aspect = u_resolution.x / u_resolution.y;
+                    vec2 uv = vUv;
+                    vec2 center = u_center;
+                    
+                    // Correct aspect ratio
+                    vec2 distVec = (uv - center);
+                    distVec.x *= aspect;
+                    float dist = length(distVec);
+
+                    // Ripple logic
+                    float ripple = sin(dist * 35.0 - u_time * 8.0) * 0.15;
+                    ripple *= exp(-dist * 3.5); // Fade over distance
+                    ripple *= exp(-u_time * 1.5); // Fade over time
+
+                    // Transparency mask
+                    float mask = smoothstep(0.01 + u_time * 0.8, 0.0 + u_time * 0.8, dist);
+                    mask *= smoothstep(0.0 + u_time * 0.5, 0.2 + u_time * 0.5, dist);
+                    
+                    vec3 color = vec3(1.0, 0.75, 0.85); // Light Pink
+                    float alpha = mask * (ripple + 0.1) * 2.5;
+                    alpha = clamp(alpha, 0.0, 0.7);
+
+                    gl_FragColor = vec4(color, alpha);
+                }
+            `,
+            transparent: true
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const startTime = performance.now();
+        function animate() {
+            const now = performance.now();
+            const elapsed = (now - startTime) / 1000;
+            material.uniforms.u_time.value = elapsed;
+            
+            renderer.render(scene, camera);
+            if (elapsed < 2.0) {
+                requestAnimationFrame(animate);
+            }
+        }
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            material.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

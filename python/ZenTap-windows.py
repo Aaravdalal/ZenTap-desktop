@@ -124,6 +124,34 @@ def get_file_icon(path):
     except: pass
     return None
 
+def get_uwp_icon_path(loc):
+    import xml.etree.ElementTree as ET
+    manifest_path = os.path.join(loc, "AppxManifest.xml")
+    if not os.path.exists(manifest_path):
+        return None
+    try:
+        tree = ET.parse(manifest_path)
+        root = tree.getroot()
+        ns = {'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',
+              'def': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10'}
+        app_node = root.find('.//def:Application', ns)
+        if app_node is not None:
+            vis = app_node.find('.//uap:VisualElements', ns)
+            if vis is not None:
+                logo_rel = vis.attrib.get('Square44x44Logo') or vis.attrib.get('Square150x150Logo')
+                if logo_rel:
+                    exact = os.path.join(loc, logo_rel)
+                    if os.path.exists(exact): return exact
+                    # Look for scaled versions like logo.scale-100.png
+                    asset_dir = os.path.dirname(exact)
+                    base, ext = os.path.splitext(os.path.basename(logo_rel))
+                    if os.path.exists(asset_dir):
+                        for f in os.listdir(asset_dir):
+                            if f.startswith(base) and f.endswith(ext):
+                                return os.path.join(asset_dir, f)
+    except: pass
+    return None
+
 def get_website_favicon(keyword):
     """Fetch favicon for a website keyword from Google's API or local folder."""
     import urllib.request
@@ -1085,28 +1113,77 @@ class ZenTapApp:
                     for file in f:
                         if file.endswith(".lnk") and not "uninstall" in file.lower():
                             temp[file[:-4]] = os.path.join(r, file)
+                            
+        # Add Microsoft Store Apps via PowerShell
+        try:
+            import subprocess
+            import json
+            # Get Start Apps
+            out = subprocess.check_output(
+                ['powershell', '-Command', 'Get-StartApps | ConvertTo-Json'], 
+                creationflags=0x08000000
+            )
+            store_apps = json.loads(out)
+            
+            # Get AppxPackages to map FamilyName -> InstallLocation
+            out_pkg = subprocess.check_output(
+                ['powershell', '-Command', 'Get-AppxPackage | Select-Object PackageFamilyName, InstallLocation | ConvertTo-Json'], 
+                creationflags=0x08000000
+            )
+            packages = json.loads(out_pkg)
+            pkg_map = {p.get('PackageFamilyName'): p.get('InstallLocation') for p in packages if p.get('PackageFamilyName')}
+            
+            for a in store_apps:
+                app_name = a.get('Name')
+                app_id = a.get('AppID')
+                if app_name and app_id:
+                    # Include if not already picked up and looks like a store app ID
+                    if app_name not in temp and ('!' in app_id or 'WindowsApps' in app_id or '\\' not in app_id):
+                        pkg_family = app_id.split('!')[0]
+                        loc = pkg_map.get(pkg_family)
+                        # We use a custom dictionary structure to hold the uwp path and loc
+                        temp[app_name] = {'appid': app_id, 'loc': loc}
+        except Exception as e:
+            print("Could not load Microsoft Store apps:", e)
         
         for name in sorted(temp.keys()):
-            self.all_apps.append({'name': name, 'path': temp[name], 'checked': False, 'icon': None})
+            path = temp[name]
+            # Detect if it's a UWP dict or normal shortcut string
+            is_uwp = isinstance(path, dict)
+            self.all_apps.append({
+                'name': name, 
+                'path': path['appid'] if is_uwp else path, 
+                'is_uwp': is_uwp,
+                'loc': path['loc'] if is_uwp else None,
+                'checked': False, 
+                'icon': None
+            })
             
         self.root.after(0, self.update_slots)
         
         for app in self.all_apps:
             try:
-                rp = resolve_shortcut(app['path'])
-                img = get_file_icon(rp)
-                if not img: img = get_file_icon(app['path'])
+                img = None
+                if app.get('is_uwp') and app.get('loc'):
+                    # Fetch UWP icon from manifest
+                    icon_path = get_uwp_icon_path(app['loc'])
+                    if icon_path:
+                        img = Image.open(icon_path).convert("RGBA")
+                else:
+                    rp = resolve_shortcut(app['path'])
+                    img = get_file_icon(rp)
+                    if not img: img = get_file_icon(app['path'])
                 
                 if img:
                     app['icon_pil'] = img # Store original for resizing
-                    app['icon'] = ImageTk.PhotoImage(img)
+                    app['icon'] = ImageTk.PhotoImage(img.resize((32, 32), Image.Resampling.LANCZOS))
                 elif self.missing_icon_img:
                     app['icon'] = self.missing_icon_img
                 else:
                     # Letter fallback
-                    i = Image.new("RGBA", (48,48), "#ddd")
+                    i = Image.new("RGBA", (32,32), "#ddd")
                     d = ImageDraw.Draw(i)
-                    d.ellipse((0,0,48,48), fill="#999")
+                    d.ellipse((0,0,32,32), fill="#999")
                     app['icon'] = ImageTk.PhotoImage(i)
             except: pass
             if self.all_apps.index(app) % 5 == 0:
@@ -2123,29 +2200,26 @@ class ManageAppsWindow:
         self.info_lbl.pack(pady=5)
         self.update_info_label()
 
-        # Scrollable Content - responsive width
+        # Scrollable Content - High Performance Canvas Virtual List
         self.list_canvas = tk.Canvas(self.tab_content, bg="white", highlightthickness=0)
-        self.list_frame = tk.Frame(self.list_canvas, bg="white")
-        
         self.list_canvas.pack(fill="both", expand=True, padx=10)
-        self.list_window = self.list_canvas.create_window((0,0), window=self.list_frame, anchor="nw")
         
         self._resize_job = None
         def on_canvas_configure(e):
             if self._resize_job:
                 self.win.after_cancel(self._resize_job)
-            self._resize_job = self.win.after(50, lambda: self.list_canvas.itemconfig(self.list_window, width=e.width))
+            self._resize_job = self.win.after(50, self._draw_canvas_list)
         self.list_canvas.bind("<Configure>", on_canvas_configure)
-        
-        def on_frame_conf(e): 
-            self.list_canvas.configure(scrollregion=self.list_canvas.bbox("all"))
-        self.list_frame.bind("<Configure>", on_frame_conf)
         
         def _on_mousewheel(event):
             self.list_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         self.list_canvas.bind("<MouseWheel>", _on_mousewheel)
-        self.list_frame.bind("<MouseWheel>", _on_mousewheel)
         self.win.bind("<MouseWheel>", _on_mousewheel)
+        
+        self.list_canvas.bind("<Button-1>", self._on_canvas_click)
+        
+        self._current_app_list = []
+        self._hitboxes = []
         
         self.populate_list(self.apps)
     
@@ -2206,6 +2280,10 @@ class ManageAppsWindow:
         kw = self.keyword_var.get().strip()
         if not kw:
             return
+            
+        # If no domain extension is provided, append .com
+        if '.' not in kw:
+            kw = kw + ".com"
         
         # Check if keyword already exists
         for item in self.web_keywords:
@@ -2301,75 +2379,56 @@ class ManageAppsWindow:
         self.populate_list(filtered)
 
     def populate_list(self, app_list):
-        # Cancel any pending load
-        if hasattr(self, '_load_job') and self._load_job:
-             self.win.after_cancel(self._load_job)
-             
-        for w in self.list_frame.winfo_children(): w.destroy()
-        
-        # Reset scroll - Important: Reset canvas view AND region
+        self._current_app_list = app_list
         self.list_canvas.yview_moveto(0)
-        self.list_canvas.configure(scrollregion=(0,0,1,1)) # Reset to minimal
-        
-        # Initial chunk
-        self._load_queue = app_list[:]
-        self._load_chunk()
-        
-    def _load_chunk(self):
-        # Guard: Check if window still exists
-        if not self.win.winfo_exists():
+        self._draw_canvas_list()
+
+    def _draw_canvas_list(self):
+        if not hasattr(self, 'win') or not self.win.winfo_exists() or not hasattr(self, '_current_app_list'):
             return
-        if not self._load_queue: return
+            
+        self.list_canvas.delete("all")
         
-        chunk = self._load_queue[:15] # Load 15 at a time
-        self._load_queue = self._load_queue[15:]
+        w = self.list_canvas.winfo_width()
+        if w < 10: w = 350
         
-        for app in chunk:
-            row = tk.Frame(self.list_frame, bg="white") 
-            row.pack(fill="x", padx=20, pady=2)
+        y = 5
+        row_height = 42
+        self._hitboxes = []
+        
+        for app in self._current_app_list:
+            # Draw Icon
+            if app.get('icon'):
+                self.list_canvas.create_image(15, y + row_height//2, image=app['icon'], anchor="w")
+                
+            # Draw Name
+            font_style = ("Roboto Medium", 11) if app['checked'] else ("Roboto", 11)
+            self.list_canvas.create_text(75, y + row_height//2, text=app['name'], font=font_style, anchor="w", fill="black")
             
-            # Hitbox frame
-            hitbox = tk.Frame(row, bg="white")
-            hitbox.pack(fill="x")
-            
-            # Checkbox RIGHT
-            chk = tk.Canvas(hitbox, width=28, height=28, bg="white", highlightthickness=0)
-            chk.pack(side="right", padx=(5, 0))
-            self.draw_checkbox(chk, app['checked'])
-            
-            # Icon LEFT
-            if app['icon']:
-                tk.Label(hitbox, image=app['icon'], bg="white").pack(side="left", padx=(0, 15))
-            
-            # Name LEFT - no bold
-            name_font = ("Roboto", 11)
-            name_lbl = tk.Label(hitbox, text=app['name'], font=name_font, bg="white", anchor="w")
-            name_lbl.pack(side="left", fill="x", expand=True)
-            
-            # Bindings
-            action = lambda e, a=app, cv=chk, nl=name_lbl: self.toggle(a, cv, nl)
-            hitbox.bind("<Button-1>", action)
-            name_lbl.bind("<Button-1>", action)
-            chk.bind("<Button-1>", action)
-            for child in hitbox.winfo_children():
-                try: child.bind("<Button-1>", action)
-                except: pass
-            
+            # Draw Checkbox
+            chk_x = w - 35
+            if app['checked']:
+                self.list_canvas.create_oval(chk_x-12, y + row_height//2 - 12, chk_x+12, y + row_height//2 + 12, fill="black", outline="black")
+                self.list_canvas.create_line(chk_x-6, y + row_height//2, chk_x-2, y + row_height//2+4, chk_x+5, y + row_height//2-6, fill="white", width=2)
+            else:
+                self.list_canvas.create_oval(chk_x-12, y + row_height//2 - 12, chk_x+12, y + row_height//2 + 12, fill="white", outline="#ddd", width=2)
+                
             # Divider
-            tk.Frame(row, height=1, bg="#f5f5f5").pack(fill="x", pady=(2,0))
+            self.list_canvas.create_line(15, y + row_height, w-15, y + row_height, fill="#f5f5f5")
+            
+            self._hitboxes.append((y, y + row_height, app))
+            y += row_height
+            
+        self.list_canvas.configure(scrollregion=(0, 0, w, max(y + 20, self.list_canvas.winfo_height())))
 
-        # Update scrollregion AFTER adding widgets
-        self.list_frame.update_idletasks() # Force geometry update
-        self.list_canvas.configure(scrollregion=self.list_canvas.bbox("all"))
+    def _on_canvas_click(self, event):
+        canvas_y = self.list_canvas.canvasy(event.y)
+        for y1, y2, app in self._hitboxes:
+            if y1 <= canvas_y <= y2:
+                self.toggle_canvas_item(app)
+                break
 
-        if self._load_queue:
-            self._load_job = self.win.after(10, self._load_chunk)
-        else:
-            # Final check just in case
-            self.list_canvas.configure(scrollregion=self.list_canvas.bbox("all"))
-
-
-    def toggle(self, app, cvs, name_lbl):
+    def toggle_canvas_item(self, app):
         count = len([a for a in self.apps if a['checked']])
         if not app['checked'] and count >= 15:
             if self.on_warn: self.on_warn("Max 15 apps allowed.")
@@ -2382,12 +2441,8 @@ class ManageAppsWindow:
         else:
             app['selection_ts'] = 0
             
-        self.draw_checkbox(cvs, app['checked'])
-        
-        font_style = ("Roboto Medium", 11) if app['checked'] else ("Roboto", 11)
-        name_lbl.configure(font=font_style)
-        
-        self.on_update() # Trigger slot update in main window
+        self._draw_canvas_list()
+        self.on_update()
         self.update_info_label()
 
     def update_info_label(self):

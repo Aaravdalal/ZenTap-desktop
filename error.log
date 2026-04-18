@@ -1,0 +1,7 @@
+Persistent Render Error: `trimesh.viewer.windowed` requires `pip install "pyglet<2"`
+Traceback (most recent call last):
+  File "C:\Users\Liam\GitHub\Home\ZenTap-desktop\zentap-windows.py", line 349, in get_3d_render
+    from trimesh.viewer.windowed import SceneViewer
+  File "C:\Users\Liam\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\trimesh\viewer\windowed.py", line 21, in <module>
+    raise ImportError('`trimesh.viewer.windowed` requires `pip install "pyglet<2"`')
+ImportError: `trimesh.viewer.windowed` requires `pip install "pyglet<2"`

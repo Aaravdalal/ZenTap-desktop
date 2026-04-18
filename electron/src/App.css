@@ -1,0 +1,7 @@
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background-color: white;
+  display: flex;
+}

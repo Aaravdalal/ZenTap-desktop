@@ -1,0 +1,70 @@
+.blocked-notifications {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.blocked-toast {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 20px 36px;
+    border-radius: 20px;
+    color: white;
+    animation: toast-in 0.3s ease-out forwards, toast-out 0.4s ease-in 2.6s forwards;
+    min-width: 280px;
+    justify-content: center;
+}
+
+.blocked-icon {
+    font-size: 28px;
+}
+
+.blocked-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.blocked-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.blocked-subtitle {
+    font-size: 13px;
+    opacity: 0.7;
+    font-weight: 400;
+}
+
+@keyframes toast-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes toast-out {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
