@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import InteractiveCard from './InteractiveCard';
 import SettingsMenu from './SettingsMenu';
 import ManageAppsPopup from './ManageAppsPopup';
@@ -67,7 +67,9 @@ export default function Dashboard() {
       </div>
 
       <div className="card-section">
-        <InteractiveCard />
+        <Suspense fallback={<div className="model-loading">Loading 3D Zen Device...</div>}>
+          <InteractiveCard />
+        </Suspense>
       </div>
 
       <div className="zen-section">

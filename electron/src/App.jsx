@@ -31,6 +31,7 @@ function App() {
   return (
     <div className="app-container">
       <RippleCanvas />
+      
       {screen === 'welcome' && (
         <WelcomeScreen onContinue={() => setScreen('dashboard')} />
       )}

@@ -194,6 +194,32 @@ function createWindow() {
     console.error(`Main window failed to load: ${code} - ${desc}`);
   });
 
+  // Forward renderer console logs to the terminal for easier debugging.
+  // Supports both older (positional) and newer (object) Electron API signatures.
+  mainWindow.webContents.on('console-message', (event, ...args) => {
+    let level, message, line, sourceId;
+    if (typeof args[0] === 'object' && args[0] !== null) {
+      ({ level, message, line, sourceId } = args[0]);
+    } else {
+      [level, message, line, sourceId] = args;
+    }
+    const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+    console.log(`[RENDERER-${levels[level] || 'LOG'}] ${message} (${sourceId}:${line})`);
+  });
+
+  mainWindow.on('render-process-gone', (e, details) => {
+    console.error(`CRITICAL: Renderer process gone! Reason: ${details.reason}, ExitCode: ${details.exitCode}`);
+  });
+
+  mainWindow.on('close', () => {
+    console.log("Main window is closing...");
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    console.log("Main window closed.");
+  });
+
   mainWindow.setMenu(null);
 }
 
@@ -471,6 +497,12 @@ ipcMain.on('trigger-fullscreen-ripple', (e, { screenX, screenY }) => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
 
+  const overlayPath = path.join(__dirname, 'ripple_overlay.html');
+  if (!fs.existsSync(overlayPath)) {
+    console.error(`ERROR: Ripple overlay file missing at: ${overlayPath}`);
+    return;
+  }
+
   rippleOverlayWindow = new BrowserWindow({
     x: 0, y: 0, width, height,
     transparent: true, frame: false,
@@ -484,7 +516,6 @@ ipcMain.on('trigger-fullscreen-ripple', (e, { screenX, screenY }) => {
 
   rippleOverlayWindow.setIgnoreMouseEvents(true);
   
-  const overlayPath = path.join(__dirname, 'ripple_overlay.html');
   rippleOverlayWindow.loadFile(overlayPath, { query: { x: screenX, y: screenY } });
 
   setTimeout(() => { 
