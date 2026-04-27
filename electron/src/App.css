@@ -6,3 +6,30 @@
   display: flex;
   overflow: hidden;
 }
+
+/* New Global Model Layer for Instant Results */
+.global-model-container {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 240px;
+  transform: translateY(-90%); /* HERO POSITION: Balanced center-low */
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+.global-model-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-160%) scale(0.8); /* Vertical centering only, width:100% handles horizontal */
+}
+
+.global-model-container.visible {
+  opacity: 1;
+  pointer-events: auto;
+}

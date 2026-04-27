@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows, Float } from '@react-three/drei';
+import { useGLTF, Environment, ContactShadows, Float, Center } from '@react-three/drei';
 import * as THREE from 'three';
 
 function Model({ url, rotation, scale }) {
@@ -84,14 +84,16 @@ function Scene() {
       
       {/* Floating effect with extremely subtle rotation to prevent "awkward" angles */}
       <Float speed={1.5} rotationIntensity={0.05} floatIntensity={0.3}>
-        <Model url="/USBC_key_v2.glb" rotation={rotation} scale={1.0} />
+        <Center>
+          <Model url="/USBC_key_v2.glb" rotation={rotation} scale={1.1} />
+        </Center>
       </Float>
 
       {/* Soft shadow like in the Python version */}
       <ContactShadows 
-        position={[0, -1.8, 0]} 
+        position={[0, -1.2, 0]} 
         opacity={0.4} 
-        scale={10} 
+        scale={8} 
         blur={2.5} 
         far={4} 
       />
@@ -99,16 +101,17 @@ function Scene() {
   );
 }
 
-export default function InteractiveCard() {
+export default React.memo(function InteractiveCard() {
   return (
-    <div className="interactive-card-canvas">
+    <div className="interactive-card-canvas" style={{ pointerEvents: 'auto', width: '600px', height: '100%' }}>
       <Canvas 
+        key="zentap-canvas"
         camera={{ position: [0, 0, 5], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         shadows
       >
         <Scene />
       </Canvas>
     </div>
   );
-}
+});

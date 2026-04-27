@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, Suspense } from 'react';
-import InteractiveCard from './InteractiveCard';
+import { useState, useEffect, useRef } from 'react';
 import SettingsMenu from './SettingsMenu';
 import ManageAppsPopup from './ManageAppsPopup';
 import BlockedNotification from './BlockedNotification';
@@ -67,9 +66,8 @@ export default function Dashboard() {
       </div>
 
       <div className="card-section">
-        <Suspense fallback={<div className="model-loading">Loading 3D Zen Device...</div>}>
-          <InteractiveCard />
-        </Suspense>
+        {/* Placeholder for global 3D model layer */}
+        <div className="model-hole"></div>
       </div>
 
       <div className="zen-section">
@@ -118,12 +116,12 @@ export default function Dashboard() {
                       
              return (
                <div key={i} className="dock-slot">
-                 {item && item.icon ? (
-                    <img src={item.icon} alt={item.name || item.keyword} />
-                 ) : item ? (
-                    <span className="fallback-text">
-                       {(item.name || item.keyword || '?').charAt(0).toUpperCase()}
-                    </span>
+                 {item ? (
+                    <img 
+                      src={item.icon || "/missing_icon.png"} 
+                      alt={item.name || item.keyword} 
+                      onError={(e) => e.target.src = '/missing_icon.png'}
+                    />
                  ) : null}
                </div>
              )

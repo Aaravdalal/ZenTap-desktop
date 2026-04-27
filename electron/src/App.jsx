@@ -3,6 +3,8 @@ import WelcomeScreen from './components/WelcomeScreen'
 import Dashboard from './components/Dashboard'
 import HudNotification from './components/HudNotification'
 import RippleCanvas from './components/RippleCanvas'
+import InteractiveCard from './components/InteractiveCard'
+import { Suspense } from 'react'
 import './App.css'
 
 // Preload the 3D model as soon as this module loads
@@ -32,6 +34,13 @@ function App() {
     <div className="app-container">
       <RippleCanvas />
       
+      {/* Persistently mounted 3D device layer for instant results */}
+      <div className={`global-model-container ${screen === 'dashboard' ? 'visible' : 'hidden'}`}>
+        <Suspense fallback={null}>
+          <InteractiveCard />
+        </Suspense>
+      </div>
+
       {screen === 'welcome' && (
         <WelcomeScreen onContinue={() => setScreen('dashboard')} />
       )}

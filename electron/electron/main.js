@@ -185,26 +185,19 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://127.0.0.1:5173').catch(() => {
+        // Retry if Vite isn't quite ready
+        setTimeout(() => mainWindow?.loadURL('http://127.0.0.1:5173'), 2000);
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
   
   mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
-    console.error(`Main window failed to load: ${code} - ${desc}`);
-  });
-
-  // Forward renderer console logs to the terminal for easier debugging.
-  // Supports both older (positional) and newer (object) Electron API signatures.
-  mainWindow.webContents.on('console-message', (event, ...args) => {
-    let level, message, line, sourceId;
-    if (typeof args[0] === 'object' && args[0] !== null) {
-      ({ level, message, line, sourceId } = args[0]);
-    } else {
-      [level, message, line, sourceId] = args;
+    // Only report real errors in production
+    if (!isDev || code !== -102) {
+      console.error(`Main window failed to load: ${code} - ${desc}`);
     }
-    const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
-    console.log(`[RENDERER-${levels[level] || 'LOG'}] ${message} (${sourceId}:${line})`);
   });
 
   mainWindow.on('render-process-gone', (e, details) => {
@@ -212,12 +205,12 @@ function createWindow() {
   });
 
   mainWindow.on('close', () => {
-    console.log("Main window is closing...");
+    console.log('Main window is closing...');
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    console.log("Main window closed.");
+    console.log('Main window fully closed.');
   });
 
   mainWindow.setMenu(null);
@@ -436,43 +429,86 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
 
   // --- WEB BLOCKING ---
   if (web && web.length > 0) {
-    const keywords = web.map(w => (w.keyword || w).replace(/'/g, "''")).filter(k => k.length > 0);
-    if (keywords.length > 0) {
+      const keywords = web.map(w => {
+          let k = (w.keyword || w).toString().split('.')[0].replace(/'/g, "''");
+          return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special chars
+      }).filter(k => k.length > 0);
+      
       const pattern = keywords.join('|');
-      // Refactored to avoid here-strings which break when line-joined
-      const webScript = "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; " +
-        "Add-Type @' " +
+
+    if (pattern.length > 0) {
+      const webScript = "[Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; " +
+        "[Reflection.Assembly]::LoadWithPartialName('UIAutomationClient') | Out-Null; " +
+        "Add-Type -TypeDefinition @' " +
         "using System; " +
         "using System.Runtime.InteropServices; " +
-        "public class WinApi { [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); } " +
+        "using System.Text; " +
+        "public class WinApi { " +
+        "  [DllImport(\"user32.dll\")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam); " +
+        "  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam); " +
+        "  [DllImport(\"user32.dll\")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount); " +
+        "  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); " +
+        "  [DllImport(\"user32.dll\")] public static extern void GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId); " +
+        "} " +
         "'@; " +
         "while($true) { " +
-        "$targets = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -match '" + pattern + "' }; " +
-        "foreach ($t in $targets) { " +
-        "$name = $t.ProcessName; " +
-        "[WinApi]::SetForegroundWindow($t.MainWindowHandle); " +
-        "Start-Sleep -Milliseconds 50; " +
-        "[System.Windows.Forms.SendKeys]::SendWait('^W'); " +
-        "Write-Output $name; " +
-        "} " +
-        "Start-Sleep -Milliseconds 600 " +
+        "  Write-Output \"DEBUG: HEARTBEAT - SCANNING\"; " +
+        "  [WinApi]::EnumWindows({ " +
+        "    param($hWnd, $lParam) " +
+        "    $sb = New-Object System.Text.StringBuilder 256; " +
+        "    if ([WinApi]::GetWindowText($hWnd, $sb, $sb.Capacity) -gt 0) { " +
+        "      $title = $sb.ToString(); " +
+        "      $matched = $false; " +
+        "      if ($title -match '" + pattern + "') { $matched = $true; Write-Output \"DEBUG: Match Title: $title\"; } " +
+        "      if (-not $matched) { " +
+        "        try { " +
+        "          $element = [System.Windows.Automation.AutomationElement]::FromHandle($hWnd); " +
+        "          if ($element) { " +
+        "            $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.AutomationControlType]::Edit); " +
+        "            $bar = $element.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition); " +
+        "            if ($bar) { " +
+        "              $url = $bar.GetCurrentPropertyValue([System.Windows.Automation.ValuePattern]::ValueProperty); " +
+        "              if ($url -match '" + pattern + "') { $matched = $true; Write-Output \"DEBUG: Match URL: $url\"; } " +
+        "            } " +
+        "          } " +
+        "        } catch {} " +
+        "      } " +
+        "      if ($matched) { " +
+        "        [WinApi]::SetForegroundWindow($hWnd) | Out-Null; " +
+        "        Start-Sleep -Milliseconds 250; " +
+        "        [System.Windows.Forms.SendKeys]::SendWait('^{w}'); " +
+        "        Write-Output \"Blocked: $title\"; " +
+        "      } " +
+        "    } " +
+        "    return $true; " +
+        "  }, 0) | Out-Null; " +
+        "  Start-Sleep -Milliseconds 400 " +
         "}";
+ 
+       try {
+           console.log('[WebBlock] Spawning PowerShell with pattern:', pattern);
+           webBlockingProcess = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', webScript]);
+           
+           webBlockingProcess.stdout.on('data', (data) => {
+               console.log('[WebBlock STDOUT]:', data.toString().trim());
+               const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
+               for (const name of names) {
+                   const trimmed = name.trim();
+                   if (!recentlyBlocked.has(trimmed) && mainWindow) {
+                       recentlyBlocked.add(trimmed);
+                       mainWindow.webContents.send('app-blocked', trimmed + ' (restricted site)');
+                       setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
+                   }
+               }
+           });
 
-      try {
-          webBlockingProcess = spawn('powershell', ['-Command', webScript]);
-          webBlockingProcess.on('error', (err) => console.error('Web block error:', err));
-          webBlockingProcess.stdout.on('data', (data) => {
-              const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
-              for (const name of names) {
-                  const trimmed = name.trim();
-                  // Use same key as app blocking for absolute deduplication
-                  if (!recentlyBlocked.has(trimmed) && mainWindow) {
-                      recentlyBlocked.add(trimmed);
-                      mainWindow.webContents.send('app-blocked', trimmed + ' (restricted site)');
-                      setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
-                  }
-              }
-          });
+           webBlockingProcess.stderr.on('data', (data) => {
+               console.error('[WebBlock STDERR]:', data.toString().trim());
+           });
+
+           webBlockingProcess.on('exit', (code) => {
+               console.log('[WebBlock] Process exited with code:', code);
+           });
       } catch (err) { console.error('Web spawn error:', err); }
     }
   }
