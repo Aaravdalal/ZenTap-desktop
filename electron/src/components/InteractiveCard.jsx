@@ -89,12 +89,12 @@ function Scene() {
         </Center>
       </Float>
 
-      {/* Soft shadow like in the Python version */}
+      {/* Soft shadow directly beneath the model */}
       <ContactShadows 
-        position={[0, -1.2, 0]} 
-        opacity={0.4} 
-        scale={8} 
-        blur={2.5} 
+        position={[0, -1.8, 0]} 
+        opacity={0.3} 
+        scale={5} 
+        blur={3} 
         far={4} 
       />
     </group>

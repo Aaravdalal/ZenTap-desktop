@@ -49,7 +49,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 200px;
+  min-height: 240px;
+  margin-top: 20px;
 }
 
 .interactive-card-canvas {
@@ -144,33 +145,39 @@
 .block-dock-section {
   margin-top: auto;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .dock-label {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  align-self: flex-start;
 }
 
 .block-dock {
   background-color: white;
   border: 2px solid black;
   border-radius: 20px;
-  padding: clamp(8px, 1vw, 20px);
+  padding: 10px 20px;
   display: flex;
   justify-content: center;
-  gap: clamp(6px, 1.2vw, 15px);
+  gap: 10px;
   cursor: pointer;
-  min-height: clamp(70px, 8vh, 110px);
+  min-height: 70px;
+  max-width: 520px;
+  width: 100%;
   align-items: center;
   transition: all 0.2s ease;
 }
 
 .dock-slot {
-  width: clamp(45px, 6vw, 80px);
-  height: clamp(45px, 6vw, 80px);
+  width: 50px;
+  height: 50px;
   border: 2px solid black;
-  border-radius: clamp(8px, 1vw, 16px);
+  border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;

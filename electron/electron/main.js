@@ -125,43 +125,62 @@ async function discoverApps() {
     const [fsApps, uwpApps] = await Promise.all([fsScanPromise, uwpScanPromise]);
     
     const seen = new Set();
+    const seenNames = new Set();
     cachedAppList = [];
     pkgMapCache = {};
 
+    // Patterns to filter out non-app entries (system tools, helpers, docs, etc.)
+    const JUNK_PATTERNS = [
+        /uninstall/i, /readme/i, /release notes/i, /license/i, /changelog/i,
+        /documentation/i, /user guide/i, /help$/i, /getting started/i,
+        /^about /i, /setup$/i, /^install /i, /^repair /i, /^remove /i,
+        /command prompt/i, /^cmd$/i, /powershell/i, /^run /i,
+        /administrative tools/i, /control panel/i, /task manager/i,
+        /device manager/i, /disk cleanup/i, /defragment/i, /system info/i,
+        /event viewer/i, /resource monitor/i, /performance monitor/i,
+        /component services/i, /computer management/i, /services$/i,
+        /windows fax/i, /windows memory/i, /odbc data/i, /iscsicpl/i,
+        /print management/i, /recovery drive/i, /system configuration/i,
+        /windows defender/i, /character map/i, /magnify/i, /narrator/i,
+        /on-screen keyboard/i, /accessibility/i, /ease of access/i,
+        /welcome to/i, /what's new/i, /^tips$/i
+    ];
+
+    const isJunk = (name) => JUNK_PATTERNS.some(p => p.test(name));
+
     // Process FS Apps
-    for (const app of fsApps) {
-        if (seen.has(app.path)) continue;
-        seen.add(app.path);
+    for (const a of fsApps) {
+        const nameLower = a.name.toLowerCase().trim();
+        if (seen.has(a.path) || seenNames.has(nameLower)) continue;
+        if (isJunk(a.name)) continue;
+        seen.add(a.path);
+        seenNames.add(nameLower);
         
-        // Resolve EXE name for blocking
         let exeName = null;
-        try {
-            const shortcut = shell.readShortcutLink(app.path);
-            if (shortcut.target) {
-                exeName = path.basename(shortcut.target);
-            }
-        } catch (e) {}
         
         cachedAppList.push({ 
-            name: app.name, 
-            path: app.path, 
+            name: a.name, 
+            path: a.path, 
             exeName: exeName,
             icon: missingIconBase64 
         });
     }
 
     // Process UWP Apps & Update Cache for icon extraction
-    for (const app of uwpApps) {
-        if (seen.has(app.AppID)) continue;
-        seen.add(app.AppID);
+    for (const a of uwpApps) {
+        const nameLower = a.Name.toLowerCase().trim();
+        if (seen.has(a.AppID) || seenNames.has(nameLower)) continue;
+        if (isJunk(a.Name)) continue;
+        seen.add(a.AppID);
+        seenNames.add(nameLower);
         cachedAppList.push({ 
-            name: app.Name, 
-            path: app.AppID, 
-            exeName: app.Name + ".exe", // UWP typically doesn't use simple taskkill, but we'll try Name
+            name: a.Name, 
+            path: a.AppID, 
+            exeName: a.Name + ".exe",
             icon: missingIconBase64 
         });
-        if (app.InstallLocation) {
-            pkgMapCache[app.AppID.split('!')[0]] = app.InstallLocation;
+        if (a.InstallLocation) {
+            pkgMapCache[a.AppID.split('!')[0]] = a.InstallLocation;
         }
     }
 
@@ -170,6 +189,7 @@ async function discoverApps() {
 }
 
 function createWindow() {
+  console.log("createWindow: Creating BrowserWindow instance...");
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 850,
@@ -178,22 +198,44 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false 
+      sandbox: true 
     },
     title: "ZenTap For Windows",
     icon: path.join(__dirname, '../public/z_icon.png')
   });
+  console.log("createWindow: BrowserWindow instance created.");
+
+  mainWindow.webContents.on('did-start-loading', () => {
+    console.log("webContents: did-start-loading");
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log("webContents: did-finish-load");
+  });
+
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log("webContents: dom-ready");
+  });
 
   if (isDev) {
-    mainWindow.loadURL('http://127.0.0.1:5173').catch(() => {
+    console.log("createWindow: Loading URL http://127.0.0.1:5173 ...");
+    mainWindow.loadURL('http://127.0.0.1:5173').then(() => {
+        console.log("createWindow: loadURL resolved successfully");
+    }).catch((err) => {
+        console.error("createWindow: loadURL failed:", err);
         // Retry if Vite isn't quite ready
-        setTimeout(() => mainWindow?.loadURL('http://127.0.0.1:5173'), 2000);
+        setTimeout(() => {
+            console.log("createWindow: Retrying loadURL...");
+            mainWindow?.loadURL('http://127.0.0.1:5173');
+        }, 2000);
     });
   } else {
+    console.log("createWindow: Loading file...");
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
   
   mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
+    console.log(`webContents: did-fail-load: ${code} - ${desc}`);
     // Only report real errors in production
     if (!isDev || code !== -102) {
       console.error(`Main window failed to load: ${code} - ${desc}`);
@@ -254,10 +296,15 @@ function startUsageTracking() {
 app.whenReady().then(async () => {
   console.log("App ready. Starting initialization...");
   try {
+    console.log("Calling loadUsage()...");
     await loadUsage();
-    startUsageTracking();
+    console.log("loadUsage() completed. Calling startUsageTracking() [skipped]...");
+    // startUsageTracking();
+    console.log("startUsageTracking() completed. Calling discoverApps()...");
     discoveryPromise = discoverApps();
+    console.log("discoverApps() returned. Calling createWindow()...");
     createWindow();
+    console.log("createWindow() completed successfully.");
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -296,6 +343,44 @@ ipcMain.on('start-icon-stream', async (event) => {
     if (discoveryPromise) await discoveryPromise;
     console.log(`Streaming ${cachedAppList.length} icons...`);
     
+    // Batch resolve all .lnk files using PowerShell to avoid Chromium shell.readShortcutLink crash
+    const lnkPaths = cachedAppList.map(a => a.path).filter(p => p.toLowerCase().endsWith('.lnk'));
+    const resolvedTargets = {};
+    if (lnkPaths.length > 0) {
+        const psScript = `
+            $ErrorActionPreference = 'SilentlyContinue';
+            $sh = New-Object -ComObject WScript.Shell;
+            $lnks = @(${lnkPaths.map(p => `'${p.replace(/'/g, "''")}'`).join(',')});
+            $out = @{};
+            foreach ($lnk in $lnks) {
+                try {
+                    $target = $sh.CreateShortcut($lnk).TargetPath;
+                    if ($target) { $out[$lnk] = $target; }
+                } catch {}
+            }
+            $out | ConvertTo-Json -Compress;
+        `;
+        try {
+            const stdout = await new Promise((resolve) => {
+                const child = spawn('powershell', ['-NoProfile', '-Command', '-']);
+                let outData = '';
+                child.stdout.on('data', d => outData += d);
+                child.on('close', () => resolve(outData));
+                child.on('error', () => resolve(''));
+                child.stdin.write(psScript);
+                child.stdin.end();
+            });
+            
+            if (stdout) {
+                const rawTargets = JSON.parse(stdout.trim() || '{}');
+                for (const k in rawTargets) {
+                    resolvedTargets[k.toLowerCase()] = rawTargets[k];
+                }
+                console.log(`Resolved ${Object.keys(resolvedTargets).length} LNK targets.`);
+            }
+        } catch (e) { console.error('LNK resolve error', e); }
+    }
+
     // Process icons in background and push to UI
     for (const appItem of cachedAppList) {
         if (!mainWindow) break;
@@ -324,10 +409,10 @@ ipcMain.on('start-icon-stream', async (event) => {
 
             // Shortcut Target Resolution
             if (iconPath && iconPath.toLowerCase().endsWith('.lnk')) {
-                try {
-                    const shortcut = shell.readShortcutLink(iconPath);
-                    if (shortcut.target) iconPath = shortcut.target;
-                } catch (e) {}
+                const lowerLnk = iconPath.toLowerCase();
+                if (resolvedTargets[lowerLnk]) {
+                    iconPath = resolvedTargets[lowerLnk];
+                }
             }
 
             // Extract Icon

@@ -31,6 +31,15 @@ export default function Dashboard() {
   };
   const toggleZen = () => {
     console.log("Toggle Zen clicked, blocking state:", isBlocking);
+    
+    // Always fire the in-app GLSL ripple effect from the button center
+    if (zenBtnRef.current) {
+      const rect = zenBtnRef.current.getBoundingClientRect();
+      const nx = (rect.left + rect.width / 2) / window.innerWidth;
+      const ny = (rect.top + rect.height / 2) / window.innerHeight;
+      window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: nx, y: ny } }));
+    }
+
     if (!isBlocking) {
       if (selectedApps.length === 0 && selectedWebsites.length === 0) {
         window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
@@ -40,7 +49,6 @@ export default function Dashboard() {
       // Trigger Fullscreen Ripple Overlay via Electron
       if (zenBtnRef.current && window.electron?.triggerFullscreenRipple) {
         const rect = zenBtnRef.current.getBoundingClientRect();
-        // Convert client coords to absolute screen coords
         const screenX = window.screenX + rect.left + rect.width / 2;
         const screenY = window.screenY + rect.top + rect.height / 2;
         window.electron.triggerFullscreenRipple({ screenX, screenY });

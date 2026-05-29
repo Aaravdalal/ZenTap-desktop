@@ -14,13 +14,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 100px;
+  margin-top: 40px;
 }
 
 .logo-container {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 250px;
+  height: 250px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -28,8 +28,8 @@
 }
 
 .logo {
-  width: 200px;
-  height: 200px;
+  width: 250px;
+  height: 250px;
   z-index: 10;
   object-fit: contain;
 }
@@ -55,13 +55,13 @@
 
 @keyframes pulse-ring {
   0% {
-    width: 200px;
-    height: 200px;
+    width: 250px;
+    height: 250px;
     opacity: 0.5;
   }
   100% {
-    width: 260px;
-    height: 260px;
+    width: 350px;
+    height: 350px;
     opacity: 0;
   }
 }
@@ -70,24 +70,23 @@
   text-align: center;
 }
 
-.title {
-  font-size: 32px;
-  font-weight: 500;
-  margin: 10px 0;
-  letter-spacing: 2px;
+.title-image {
+  height: 60px; /* Scaled down from 80px */
+  margin: 5px 0 15px 0;
+  object-fit: contain;
 }
 
 .subtitle {
-  font-size: 10px;
+  font-size: 20px;
   color: gray;
-  margin: 5px 0;
-  letter-spacing: 1px;
+  margin: 15px 0;
+  letter-spacing: 2px;
 }
 
 .version {
-  font-size: 8px;
-  color: #444;
-  margin-top: 20px;
+  font-size: 16px;
+  color: #666;
+  margin-top: 30px;
 }
 
 .continue-btn {

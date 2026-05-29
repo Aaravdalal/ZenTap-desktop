@@ -10,11 +10,11 @@
 /* New Global Model Layer for Instant Results */
 .global-model-container {
   position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 240px;
-  transform: translateY(-90%); /* HERO POSITION: Balanced center-low */
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 280px;
   z-index: 5;
   pointer-events: none;
   display: flex;
@@ -26,10 +26,11 @@
 .global-model-container.hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-160%) scale(0.8); /* Vertical centering only, width:100% handles horizontal */
+  transform: translateX(-50%) scale(0.8);
 }
 
 .global-model-container.visible {
   opacity: 1;
   pointer-events: auto;
+  transform: translateX(-50%);
 }

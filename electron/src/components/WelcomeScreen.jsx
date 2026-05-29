@@ -23,7 +23,7 @@ export default function WelcomeScreen({ onContinue }) {
           </div>
           
           <div className="text-content">
-             <h1 className="title">ZEN TAP</h1>
+             <img src="/zentap_text.jpg" className="title-image" alt="ZenTap" />
              <p className="subtitle">— FOCUS • TAP • ACHIEVE —</p>
              <p className="version">1.0.1 ZEN OS</p>
           </div>
