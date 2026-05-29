@@ -114,8 +114,9 @@ export default function Dashboard() {
       </div>
 
       <div className="block-dock-section">
-        <p className="dock-label">Ready To Block:</p>
-        <div className="block-dock" onClick={() => setShowPopup(true)}>
+        <div className="dock-container">
+          <p className="dock-label">Ready To Block:</p>
+          <div className="block-dock" onClick={() => setShowPopup(true)}>
           {[...Array(8)].map((_, i) => {
              // fill with apps, then webs, then empty
              let item = i < selectedApps.length ? selectedApps[i] 
@@ -136,6 +137,7 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+    </div>
 
       {showPopup && (
         <ManageAppsPopup 

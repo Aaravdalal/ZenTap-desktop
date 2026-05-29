@@ -12,9 +12,9 @@ function Model({ url, rotation, scale }) {
 
 function Scene() {
   // Center values: flipped from previous to show logo + silver on right
-  // Reduced limit to prevent awkward diagonal orientations
-  const LIMIT_X = Math.PI / 10; // ~18 degrees
-  const LIMIT_Y = Math.PI / 6;  // ~30 degrees
+  // Severely restrict limits so the user can never see the back of the device
+  const LIMIT_X = Math.PI / 16; // ~11 degrees
+  const LIMIT_Y = Math.PI / 12; // ~15 degrees
   
   // Adjusted baseline to flip the model
   const BASE_X = Math.PI / 2; 
@@ -43,9 +43,9 @@ function Scene() {
     const deltaX = e.clientX - previousMousePosition.current.x;
     const deltaY = e.clientY - previousMousePosition.current.y;
 
-    // Apply movement
-    targetRotation.current[1] += deltaX * 0.008; // Slightly slower for better control
-    targetRotation.current[0] += deltaY * 0.008;
+    // Apply movement (slower, more deliberate feel)
+    targetRotation.current[1] += deltaX * 0.004; 
+    targetRotation.current[0] += deltaY * 0.004;
 
     // Clamp to stricter limits from BASE
     targetRotation.current[0] = Math.max(BASE_X - LIMIT_X, Math.min(BASE_X + LIMIT_X, targetRotation.current[0]));
@@ -57,20 +57,21 @@ function Scene() {
   useFrame(() => {
     if (!isDragging) {
       // Smoothly spring back to BASE orientation
-      const springFactor = 0.08; 
+      const springFactor = 0.06; 
       targetRotation.current[0] += (BASE_X - targetRotation.current[0]) * springFactor;
       targetRotation.current[1] += (BASE_Y - targetRotation.current[1]) * springFactor;
     }
 
-    // Smooth interpolation for "creamy" rotation feel
-    currentRotation.current[0] += (targetRotation.current[0] - currentRotation.current[0]) * 0.12;
-    currentRotation.current[1] += (targetRotation.current[1] - currentRotation.current[1]) * 0.12;
+    // Smooth interpolation for "creamy" rotation feel (snappier response)
+    currentRotation.current[0] += (targetRotation.current[0] - currentRotation.current[0]) * 0.2;
+    currentRotation.current[1] += (targetRotation.current[1] - currentRotation.current[1]) * 0.2;
 
     setRotation([...currentRotation.current]);
   });
 
   return (
     <group 
+      position={[0, 0, 0]}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerMove={handlePointerMove}
@@ -85,17 +86,27 @@ function Scene() {
       {/* Floating effect with extremely subtle rotation to prevent "awkward" angles */}
       <Float speed={1.5} rotationIntensity={0.05} floatIntensity={0.3}>
         <Center>
-          <Model url="/USBC_key_v2.glb" rotation={rotation} scale={1.1} />
+          <Model url="/USBC_key_v2.glb" rotation={rotation} scale={0.6} />
         </Center>
       </Float>
 
-      {/* Soft shadow directly beneath the model */}
+      {/* Outer soft shadow gradient */}
       <ContactShadows 
         position={[0, -1.8, 0]} 
-        opacity={0.3} 
-        scale={5} 
+        opacity={0.25} 
+        scale={12} 
         blur={3} 
-        far={4} 
+        far={5} 
+        resolution={512}
+      />
+      {/* Inner dark core shadow */}
+      <ContactShadows 
+        position={[0, -1.8, 0]} 
+        opacity={0.5} 
+        scale={8} 
+        blur={1} 
+        far={5} 
+        resolution={1024}
       />
     </group>
   );
@@ -106,7 +117,7 @@ export default React.memo(function InteractiveCard() {
     <div className="interactive-card-canvas" style={{ pointerEvents: 'auto', width: '600px', height: '100%' }}>
       <Canvas 
         key="zentap-canvas"
-        camera={{ position: [0, 0, 5], fov: 45 }}
+        camera={{ position: [0, -0.4, 5.2], fov: 45 }}
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         shadows
       >
