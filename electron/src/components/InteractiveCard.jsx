@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows, Float, Center } from '@react-three/drei';
+import { useGLTF, Environment, ContactShadows, Center, PresentationControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 function Model({ url, rotation, scale }) {
@@ -11,62 +11,62 @@ function Model({ url, rotation, scale }) {
 }
 
 function Scene() {
-  // Center values: flipped from previous to show logo + silver on right
-  // Severely restrict limits so the user can never see the back of the device
-  const LIMIT_X = Math.PI / 16; // ~11 degrees
-  const LIMIT_Y = Math.PI / 12; // ~15 degrees
+  const LIMIT_X = Math.PI;  
+  const LIMIT_Y = Math.PI;  
   
-  // Adjusted baseline to flip the model
   const BASE_X = Math.PI / 2; 
   const BASE_Y = -Math.PI / 2; 
-  
-  const [rotation, setRotation] = useState([BASE_X, BASE_Y, 0]);
-  const [isDragging, setIsDragging] = useState(false);
+
+  const modelRef = useRef();
+  const isDragging = useRef(false);
   const previousMousePosition = useRef({ x: 0, y: 0 });
 
-  const targetRotation = useRef([BASE_X, BASE_Y, 0]);
-  const currentRotation = useRef([BASE_X, BASE_Y, 0]);
+  // Interactive rotations start at 0, independent of the model's resting orientation
+  const targetRotation = useRef([0, 0, 0]);
+  const currentRotation = useRef([0, 0, 0]);
 
   const handlePointerDown = (e) => {
-    setIsDragging(true);
+    isDragging.current = true;
     previousMousePosition.current = { x: e.clientX, y: e.clientY };
     e.target.setPointerCapture(e.pointerId);
   };
 
   const handlePointerUp = (e) => {
-    setIsDragging(false);
+    isDragging.current = false;
     e.target.releasePointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e) => {
-    if (!isDragging) return;
+    if (!isDragging.current) return;
     const deltaX = e.clientX - previousMousePosition.current.x;
     const deltaY = e.clientY - previousMousePosition.current.y;
 
-    // Apply movement (slower, more deliberate feel)
-    targetRotation.current[1] += deltaX * 0.004; 
-    targetRotation.current[0] += deltaY * 0.004;
+    targetRotation.current[1] += deltaX * 0.008; 
+    targetRotation.current[0] += deltaY * 0.008;
 
-    // Clamp to stricter limits from BASE
-    targetRotation.current[0] = Math.max(BASE_X - LIMIT_X, Math.min(BASE_X + LIMIT_X, targetRotation.current[0]));
-    targetRotation.current[1] = Math.max(BASE_Y - LIMIT_Y, Math.min(BASE_Y + LIMIT_Y, targetRotation.current[1]));
+    // Clamp limits around 0
+    targetRotation.current[0] = Math.max(-LIMIT_X, Math.min(LIMIT_X, targetRotation.current[0]));
+    targetRotation.current[1] = Math.max(-LIMIT_Y, Math.min(LIMIT_Y, targetRotation.current[1]));
 
     previousMousePosition.current = { x: e.clientX, y: e.clientY };
   };
 
-  useFrame(() => {
-    if (!isDragging) {
-      // Smoothly spring back to BASE orientation
-      const springFactor = 0.06; 
-      targetRotation.current[0] += (BASE_X - targetRotation.current[0]) * springFactor;
-      targetRotation.current[1] += (BASE_Y - targetRotation.current[1]) * springFactor;
+  useFrame((state) => {
+    if (!isDragging.current) {
+      const springFactor = 0.08; 
+      targetRotation.current[0] += (0 - targetRotation.current[0]) * springFactor;
+      targetRotation.current[1] += (0 - targetRotation.current[1]) * springFactor;
     }
 
-    // Smooth interpolation for "creamy" rotation feel (snappier response)
-    currentRotation.current[0] += (targetRotation.current[0] - currentRotation.current[0]) * 0.2;
-    currentRotation.current[1] += (targetRotation.current[1] - currentRotation.current[1]) * 0.2;
+    currentRotation.current[0] += (targetRotation.current[0] - currentRotation.current[0]) * 0.3;
+    currentRotation.current[1] += (targetRotation.current[1] - currentRotation.current[1]) * 0.3;
 
-    setRotation([...currentRotation.current]);
+    if (modelRef.current) {
+      // Apply rotation directly to avoid React state lag
+      modelRef.current.rotation.x = currentRotation.current[0];
+      modelRef.current.rotation.y = currentRotation.current[1];
+      modelRef.current.rotation.z = currentRotation.current[2];
+    }
   });
 
   return (
@@ -80,15 +80,13 @@ function Scene() {
       <ambientLight intensity={1.5} />
       <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} />
       <pointLight position={[-10, -10, -10]} intensity={1} />
-      
       <Environment preset="city" />
       
-      {/* Floating effect with extremely subtle rotation to prevent "awkward" angles */}
-      <Float speed={1.5} rotationIntensity={0.05} floatIntensity={0.3}>
+      <group ref={modelRef}>
         <Center>
-          <Model url="/USBC_key_v2.glb" rotation={rotation} scale={0.6} />
+          <Model url="/USBC_key_v2.glb" rotation={[BASE_X, BASE_Y, 0]} scale={0.6} />
         </Center>
-      </Float>
+      </group>
 
       {/* Outer soft shadow gradient */}
       <ContactShadows 
