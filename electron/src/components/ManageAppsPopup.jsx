@@ -29,10 +29,10 @@ export default function ManageAppsPopup({ onClose, selectedApps, setSelectedApps
       });
 
       // 3. Listen for incoming icons
-      window.electron.onAppIconReady(({ path, icon }) => {
+      window.electron.onAppIconReady(({ path, icon, exeName }) => {
         if (!isMounted) return;
         setAllApps(prev => prev.map(a => 
-           (a.path === path) ? { ...a, icon } : a
+           (a.path === path) ? { ...a, icon, ...(exeName ? { exeName } : {}) } : a
         ));
       });
 

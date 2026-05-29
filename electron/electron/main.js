@@ -412,6 +412,10 @@ ipcMain.on('start-icon-stream', async (event) => {
                 const lowerLnk = iconPath.toLowerCase();
                 if (resolvedTargets[lowerLnk]) {
                     iconPath = resolvedTargets[lowerLnk];
+                    // Save the resolved exe name back to the app item for blocking
+                    if (iconPath.toLowerCase().endsWith('.exe')) {
+                        appItem.exeName = path.basename(iconPath);
+                    }
                 }
             }
 
@@ -457,7 +461,11 @@ ipcMain.on('start-icon-stream', async (event) => {
 
         if (icon) {
             appItem.icon = icon;
-            mainWindow.webContents.send('app-icon-ready', { path: appItem.path, icon });
+            mainWindow.webContents.send('app-icon-ready', { 
+                path: appItem.path, 
+                icon,
+                exeName: appItem.exeName || null
+            });
         }
         
         // Extremely small delay to keep throughput high but UI responsive
@@ -477,6 +485,7 @@ ipcMain.handle('fetch-favicon', async (event, domain) => {
 });
 
 ipcMain.on('start-blocking', (e, { apps, web }) => {
+  console.log('[Blocking] START received. Apps:', apps.map(a => a.name), 'Web:', web.map(w => w.keyword || w));
   isBlocking = true;
   blockLists = { apps, web };
   recentlyBlocked.clear();
@@ -486,12 +495,20 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
   if (blockInterval) { clearInterval(blockInterval); blockInterval = null; }
   
   // --- APP BLOCKING ---
+  // Look up the resolved exeName from cachedAppList if not already on the app object
   const appNames = apps
     .map(a => {
-      let target = a.exeName ? a.exeName : (APP_MAP[a.name] || a.name.toLowerCase().replace(/ /g, '') + '.exe');
-      return target.replace('.exe', '').replace(/'/g, "''");
+      // Try to find the resolved exe from the cache
+      let target = a.exeName;
+      if (!target) {
+        const cached = cachedAppList.find(c => c.name === a.name || c.path === a.path);
+        if (cached && cached.exeName) target = cached.exeName;
+      }
+      if (!target) target = APP_MAP[a.name] || a.name.toLowerCase().replace(/ /g, '') + '.exe';
+      return target.replace(/\.exe$/i, '').replace(/'/g, "''");
     })
     .filter(name => name.length > 0);
+  console.log('[Blocking] Resolved app process names:', appNames);
 
   if (appNames.length > 0) {
     const psScript = `$names = @('${appNames.join("','")}'); while($true) { $killed = Get-Process | Where-Object { $_.ProcessName -in $names }; if ($killed) { $killed | ForEach-Object { Write-Output $_.ProcessName }; $killed | Stop-Process -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 150 }`;
@@ -502,6 +519,7 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
             const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
             for (const name of names) {
                 const trimmed = name.trim();
+                if (trimmed.startsWith('DEBUG:')) continue;
                 if (!recentlyBlocked.has(trimmed) && mainWindow) {
                     recentlyBlocked.add(trimmed);
                     mainWindow.webContents.send('app-blocked', trimmed);
@@ -575,17 +593,21 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
            webBlockingProcess = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', webScript]);
            
            webBlockingProcess.stdout.on('data', (data) => {
-               console.log('[WebBlock STDOUT]:', data.toString().trim());
-               const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
-               for (const name of names) {
-                   const trimmed = name.trim();
-                   if (!recentlyBlocked.has(trimmed) && mainWindow) {
-                       recentlyBlocked.add(trimmed);
-                       mainWindow.webContents.send('app-blocked', trimmed + ' (restricted site)');
-                       setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
-                   }
-               }
-           });
+                console.log('[WebBlock STDOUT]:', data.toString().trim());
+                const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
+                for (const name of names) {
+                    const trimmed = name.trim();
+                    if (trimmed.startsWith('DEBUG:')) continue;
+                    // Extract the clean name from "Blocked: xyz" format
+                    const blockedMatch = trimmed.match(/^Blocked:\s*(.+)$/i);
+                    const displayName = blockedMatch ? blockedMatch[1] : trimmed;
+                    if (!recentlyBlocked.has(displayName) && mainWindow) {
+                        recentlyBlocked.add(displayName);
+                        mainWindow.webContents.send('app-blocked', displayName + ' (restricted site)');
+                        setTimeout(() => recentlyBlocked.delete(displayName), 5000);
+                    }
+                }
+            });
 
            webBlockingProcess.stderr.on('data', (data) => {
                console.error('[WebBlock STDERR]:', data.toString().trim());
