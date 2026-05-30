@@ -193,6 +193,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 850,
+    transparent: true,
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -257,6 +259,15 @@ function createWindow() {
 
   mainWindow.setMenu(null);
 }
+
+ipcMain.on('minimize-app', () => { if (mainWindow) mainWindow.minimize(); });
+ipcMain.on('maximize-app', () => { 
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  }
+});
+ipcMain.on('close-app', () => { if (mainWindow) mainWindow.close(); });
 
 async function loadUsage() {
     try {
@@ -325,9 +336,10 @@ app.on('window-all-closed', () => {
 // IPC Calls for blocking
 let isBlocking = false;
 let blockLists = { apps: [], web: [] };
-let blockInterval;
-let blockingProcess;
-let webBlockingProcess;
+let blockInterval = null;
+let blockingProcess = null;
+let usbMonitorProcess = null;
+let webBlockingProcess = null;
 const recentlyBlocked = new Set();
 
 ipcMain.handle('get-screen-time', async () => {
@@ -687,3 +699,44 @@ ipcMain.on('toggle-notifications', (e, muted) => {
 ipcMain.on('show-error', (e, title, body) => {
    // dialog
 });
+
+ipcMain.on('start-usb-monitoring', (event) => {
+    if (usbMonitorProcess) return;
+    console.log('[USB] Starting physical USB monitoring...');
+    
+    // PowerShell script to monitor USB connection via WMI polling
+    const psScript = `
+        $ErrorActionPreference = 'SilentlyContinue';
+        $initial = Get-WmiObject Win32_PnPEntity | Where-Object { $_.DeviceID -match '^USB' } | Select-Object -ExpandProperty DeviceID
+        while ($true) {
+            Start-Sleep -Seconds 1
+            $current = Get-WmiObject Win32_PnPEntity | Where-Object { $_.DeviceID -match '^USB' } | Select-Object -ExpandProperty DeviceID
+            $diff_all = Compare-Object $initial $current
+            if ($diff_all) {
+                $inserted = $diff_all | Where-Object { $_.SideIndicator -eq '=>' }
+                if ($inserted) {
+                    Write-Host "USB_INSERTED"
+                }
+                $initial = $current
+            }
+        }
+    `;
+    
+    usbMonitorProcess = spawn('powershell', ['-NoProfile', '-Command', psScript]);
+    
+    usbMonitorProcess.stdout.on('data', (data) => {
+        if (data.toString().includes('USB_INSERTED')) {
+            console.log('[USB] Physical USB Key Inserted!');
+            if (mainWindow) mainWindow.webContents.send('usb-inserted');
+        }
+    });
+});
+
+ipcMain.on('stop-usb-monitoring', () => {
+    if (usbMonitorProcess) {
+        console.log('[USB] Stopping physical USB monitoring...');
+        try { usbMonitorProcess.kill(); } catch(e){}
+        usbMonitorProcess = null;
+    }
+});
+

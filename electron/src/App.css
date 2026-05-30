@@ -4,6 +4,9 @@
   position: relative;
   background-color: white;
   overflow: hidden;
+  border-radius: 40px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
 /* New Global Model Layer for Instant Results */

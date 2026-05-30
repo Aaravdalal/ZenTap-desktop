@@ -15,6 +15,7 @@
   align-items: center;
   position: relative;
   margin-bottom: 10px;
+  -webkit-app-region: drag;
 }
 
 .title {
@@ -204,4 +205,27 @@
   font-size: clamp(16px, 2vw, 32px);
   font-weight: bold;
   color: #666;
+}
+.window-controls {
+  display: flex;
+  height: 32px;
+  margin-left: 10px;
+}
+.win-btn {
+  width: 46px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  transition: background 0.1s;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.win-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.win-btn.close:hover {
+  background: #e81123;
+  color: white;
 }

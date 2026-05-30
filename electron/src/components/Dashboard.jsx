@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SettingsMenu from './SettingsMenu';
 import ManageAppsPopup from './ManageAppsPopup';
+import InsertKeyPopup from './InsertKeyPopup';
 import BlockedNotification from './BlockedNotification';
 import './Dashboard.css';
 
@@ -11,7 +12,21 @@ export default function Dashboard() {
   const [selectedWebsites, setSelectedWebsites] = useState([]);
   const [isBlocking, setIsBlocking] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
+  const [showInsertKey, setShowInsertKey] = useState(false);
   const zenBtnRef = useRef(null);
+  
+  const [isUsbInserted, setIsUsbInserted] = useState(false);
+  const showInsertKeyRef = useRef(showInsertKey);
+  
+  useEffect(() => {
+    showInsertKeyRef.current = showInsertKey;
+    if (showInsertKey) {
+        setIsUsbInserted(false); // Reset success state when reopening popup
+        window.electron?.startUsbMonitoring?.();
+    } else {
+        window.electron?.stopUsbMonitoring?.();
+    }
+  }, [showInsertKey]);
 
   useEffect(() => {
     // Initial fetch
@@ -21,6 +36,14 @@ export default function Dashboard() {
     window.electron?.onUsageUpdated((minutes) => {
       setScreenTime(minutes);
     });
+
+    // Listen for real physical USB insertions
+    window.electron?.onUsbInserted?.(() => {
+       console.log("USB insertion detected from backend!");
+       if (showInsertKeyRef.current) {
+           setIsUsbInserted(true);
+       }
+    });
   }, []);
 
   const formatTime = (mins) => {
@@ -29,16 +52,25 @@ export default function Dashboard() {
     const m = mins % 60;
     return `${h}h ${m}m`;
   };
+  const handleKeyInserted = () => {
+    setShowInsertKey(false);
+    
+    // Trigger ripple from center of screen since popup is centered
+    window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: 0.5, y: 0.5 } }));
+    
+    // Trigger Fullscreen Ripple Overlay via Electron
+    if (window.electron?.triggerFullscreenRipple) {
+      const screenX = window.screenX + window.innerWidth / 2;
+      const screenY = window.screenY + window.innerHeight / 2;
+      window.electron.triggerFullscreenRipple({ screenX, screenY });
+    }
+
+    window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites });
+    setIsBlocking(true);
+  };
+
   const toggleZen = () => {
     console.log("Toggle Zen clicked, blocking state:", isBlocking);
-    
-    // Always fire the in-app GLSL ripple effect from the button center
-    if (zenBtnRef.current) {
-      const rect = zenBtnRef.current.getBoundingClientRect();
-      const nx = (rect.left + rect.width / 2) / window.innerWidth;
-      const ny = (rect.top + rect.height / 2) / window.innerHeight;
-      window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: nx, y: ny } }));
-    }
 
     if (!isBlocking) {
       if (selectedApps.length === 0 && selectedWebsites.length === 0) {
@@ -46,16 +78,8 @@ export default function Dashboard() {
         return;
       }
       
-      // Trigger Fullscreen Ripple Overlay via Electron
-      if (zenBtnRef.current && window.electron?.triggerFullscreenRipple) {
-        const rect = zenBtnRef.current.getBoundingClientRect();
-        const screenX = window.screenX + rect.left + rect.width / 2;
-        const screenY = window.screenY + rect.top + rect.height / 2;
-        window.electron.triggerFullscreenRipple({ screenX, screenY });
-      }
-
-      window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites });
-      setIsBlocking(true);
+      // Show the Insert Key popup
+      setShowInsertKey(true);
     } else {
       window.electron?.stopBlocking();
       setIsBlocking(false);
@@ -66,11 +90,25 @@ export default function Dashboard() {
     <div className="dashboard-container">
       <div className="header">
         <h2 className="title">ZenTap for Desktop</h2>
-        <div className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
-          <img src="/settings_square.png" className="settings-bg" alt="box" />
-          <img src="/settings_gear.png" className="settings-gear" alt="gear" />
+        <div className="header-controls" style={{ display: 'flex', gap: '12px', WebkitAppRegion: 'no-drag', alignItems: 'center' }}>
+          <div className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
+            <img src="/settings_square.png" className="settings-bg" alt="box" />
+            <img src="/settings_gear.png" className="settings-gear" alt="gear" />
+          </div>
+          {showSettings && <SettingsMenu onClose={() => setShowSettings(false)} />}
+          
+          <div className="window-controls" style={{ display: 'flex', marginLeft: '10px', marginRight: '-20px' }}>
+            <div className="win-btn minimize" onClick={() => window.electron?.minimizeApp?.()}>
+              <svg viewBox="0 0 10 1" width="10" height="1"><path d="M0,0h10v1H0z" fill="currentColor"/></svg>
+            </div>
+            <div className="win-btn maximize" onClick={() => window.electron?.maximizeApp?.()}>
+              <svg viewBox="0 0 10 10" width="10" height="10"><path d="M0,0v10h10V0H0z M1,1h8v8H1V1z" fill="currentColor"/></svg>
+            </div>
+            <div className="win-btn close" onClick={() => window.electron?.closeApp?.()}>
+              <svg viewBox="0 0 10 10" width="10" height="10"><path d="M10,1L9,0L5,4L1,0L0,1l4,4L0,9l1,1l4-4l4,4l1-1L6,5L10,1z" fill="currentColor"/></svg>
+            </div>
+          </div>
         </div>
-        {showSettings && <SettingsMenu onClose={() => setShowSettings(false)} />}
       </div>
 
       <div className="card-section">
@@ -115,7 +153,9 @@ export default function Dashboard() {
 
       <div className="block-dock-section">
         <div className="dock-container">
-          <p className="dock-label">Ready To Block:</p>
+          <div className="dock-label-container" style={{display: 'flex', justifyContent: 'center', marginBottom: '10px'}}>
+             <span style={{fontWeight: 'bold', fontSize: '14px', color: '#333'}}>Ready To Block:</span>
+          </div>
           <div className="block-dock" onClick={() => setShowPopup(true)}>
           {[...Array(8)].map((_, i) => {
              // fill with apps, then webs, then empty
@@ -146,6 +186,13 @@ export default function Dashboard() {
            setSelectedApps={setSelectedApps}
            selectedWebsites={selectedWebsites}
            setSelectedWebsites={setSelectedWebsites}
+        />
+      )}
+      {showInsertKey && (
+        <InsertKeyPopup 
+          onClose={() => setShowInsertKey(false)} 
+          onInsert={handleKeyInserted}
+          isSuccess={isUsbInserted}
         />
       )}
       <BlockedNotification />

@@ -1,0 +1,180 @@
+.insert-key-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.insert-key-popup {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  background: white;
+  border-radius: 32px 32px 0 0;
+  padding: 40px 30px 50px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1000;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box;
+}
+
+.insert-key-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.insert-key-close:hover {
+  background: #e0e0e0;
+}
+
+.insert-key-header {
+  text-align: center;
+  margin-bottom: 40px;
+  margin-top: 10px;
+}
+
+.insert-key-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+}
+
+.insert-key-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+  font-weight: 500;
+}
+
+.insert-key-icon-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 50px;
+}
+
+.insert-key-image {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+}
+
+.insert-key-cancel {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  border-radius: 100px;
+  background: #007AFF;
+  color: white;
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
+  letter-spacing: 0.5px;
+}
+
+.insert-key-cancel:active {
+  transform: scale(0.98);
+  background: #0062CC;
+}
+
+.insert-key-overlay.closing {
+  animation: fade-out 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.insert-key-popup.closing {
+  animation: slide-down 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.success-checkmark-wrapper {
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-checkmark__circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke: #007AFF;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.success-checkmark {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 2;
+  stroke: #fff;
+  stroke-miterlimit: 10;
+  box-shadow: inset 0px 0px 0px #007AFF;
+  animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+}
+
+.success-checkmark__check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes stroke {
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes scale {
+  0%, 100% { transform: none; }
+  50% { transform: scale3d(1.1, 1.1, 1); }
+}
+
+@keyframes fill {
+  100% { box-shadow: inset 0px 0px 0px 50px #007AFF; }
+}

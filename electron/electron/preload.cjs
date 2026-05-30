@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('electron', {
   startBlocking: (payload) => ipcRenderer.send('start-blocking', payload),
   stopBlocking: () => ipcRenderer.send('stop-blocking'),
   toggleNotifications: (muted) => ipcRenderer.send('toggle-notifications', muted),
+  minimizeApp: () => ipcRenderer.send('minimize-app'),
+  maximizeApp: () => ipcRenderer.send('maximize-app'),
+  closeApp: () => ipcRenderer.send('close-app'),
   onHudMessage: (callback) => {
     ipcRenderer.on('hud-message', (event, message) => callback(message));
   },
@@ -21,5 +24,11 @@ contextBridge.exposeInMainWorld('electron', {
   onAppBlocked: (callback) => {
     ipcRenderer.on('app-blocked', (event, appName) => callback(appName));
   },
-  triggerFullscreenRipple: (coords) => ipcRenderer.send('trigger-fullscreen-ripple', coords)
+  triggerFullscreenRipple: (coords) => ipcRenderer.send('trigger-fullscreen-ripple', coords),
+  startUsbMonitoring: () => ipcRenderer.send('start-usb-monitoring'),
+  stopUsbMonitoring: () => ipcRenderer.send('stop-usb-monitoring'),
+  onUsbInserted: (callback) => {
+    ipcRenderer.removeAllListeners('usb-inserted'); // Prevent duplicate listeners
+    ipcRenderer.on('usb-inserted', () => callback());
+  }
 });
