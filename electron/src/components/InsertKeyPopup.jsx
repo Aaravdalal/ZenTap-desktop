@@ -34,10 +34,13 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
         
         <div className="insert-key-icon-container">
            {isSuccess ? (
-             <div className="success-checkmark-wrapper">
-               <svg className="success-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                 <circle className="success-checkmark__circle" cx="26" cy="26" r="25" fill="none" />
-                 <path className="success-checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+             <div className="google-pay-checkmark-wrapper">
+               <svg className="gpay-circle-svg" width="140" height="140" viewBox="0 0 140 140">
+                 <circle className="gpay-circle-outline" cx="70" cy="70" r="60" stroke="#1A73E8" strokeWidth="8" fill="none" strokeDasharray="400" strokeDashoffset="400" strokeLinecap="round" transform="rotate(-90 70 70)" />
+               </svg>
+               <div className="gpay-circle-fill"></div>
+               <svg className="gpay-check-svg" width="140" height="140" viewBox="0 0 140 140">
+                 <path className="gpay-check-path" d="M 40 72 L 60 92 L 100 45" stroke="#FFFFFF" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="100" strokeDashoffset="100" />
                </svg>
              </div>
            ) : (

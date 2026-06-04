@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeImage, shell, powerMonitor, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, shell, powerMonitor, screen, Tray, Menu } from 'electron';
 
 // Global error handling to catch silent crashes ("Exit 0" or unhandled rejections)
 process.on('uncaughtException', (error) => {
@@ -18,6 +18,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
+let tray = null;
+let isQuitting = false;
 let isDev = process.env.NODE_ENV === 'development';
 
 // Screen Time State
@@ -248,7 +250,12 @@ function createWindow() {
     console.error(`CRITICAL: Renderer process gone! Reason: ${details.reason}, ExitCode: ${details.exitCode}`);
   });
 
-  mainWindow.on('close', () => {
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+      return false;
+    }
     console.log('Main window is closing...');
   });
 
@@ -268,6 +275,35 @@ ipcMain.on('maximize-app', () => {
   }
 });
 ipcMain.on('close-app', () => { if (mainWindow) mainWindow.close(); });
+
+app.on('before-quit', () => {
+    console.log("Cleaning up child processes before quit...");
+    if (blockingProcess) { try { blockingProcess.kill(); } catch (e) {} }
+    if (webBlockingProcess) { try { webBlockingProcess.kill(); } catch (e) {} }
+    if (usbMonitorProcess) { try { usbMonitorProcess.kill(); } catch (e) {} }
+});
+
+const CONFIG_FILE = path.join(app.getPath('userData'), 'zentap_config.json');
+
+ipcMain.handle('load-config', async () => {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const data = await readFile(CONFIG_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error("Load config failed:", e);
+    }
+    return {};
+});
+
+ipcMain.on('save-config', (e, configData) => {
+    try {
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(configData));
+    } catch (err) {
+        console.error("Save config failed:", err);
+    }
+});
 
 async function loadUsage() {
     try {
@@ -317,9 +353,21 @@ app.whenReady().then(async () => {
     createWindow();
     console.log("createWindow() completed successfully.");
 
+    // Add Tray Icon
+    tray = new Tray(path.join(__dirname, '../public/z_icon.png'));
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Show ZenTap', click: () => mainWindow && mainWindow.show() },
+      { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
+    ]);
+    tray.setToolTip('ZenTap');
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => mainWindow && mainWindow.show());
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
+      } else if (mainWindow) {
+        mainWindow.show();
       }
     });
   } catch (err) {
@@ -532,9 +580,12 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
             for (const name of names) {
                 const trimmed = name.trim();
                 if (trimmed.startsWith('DEBUG:')) continue;
-                if (!recentlyBlocked.has(trimmed) && mainWindow) {
+                if (!recentlyBlocked.has(trimmed)) {
                     recentlyBlocked.add(trimmed);
-                    mainWindow.webContents.send('app-blocked', trimmed);
+                    if (mainWindow) {
+                        mainWindow.webContents.send('app-blocked', trimmed);
+                    }
+                    showNotificationOverlay(trimmed);
                     setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
                 }
             }
@@ -613,9 +664,13 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
                     // Extract the clean name from "Blocked: xyz" format
                     const blockedMatch = trimmed.match(/^Blocked:\s*(.+)$/i);
                     const displayName = blockedMatch ? blockedMatch[1] : trimmed;
-                    if (!recentlyBlocked.has(displayName) && mainWindow) {
+                    if (!recentlyBlocked.has(displayName)) {
                         recentlyBlocked.add(displayName);
-                        mainWindow.webContents.send('app-blocked', displayName + ' (restricted site)');
+                        const fullMessage = displayName + ' (restricted site)';
+                        if (mainWindow) {
+                            mainWindow.webContents.send('app-blocked', fullMessage);
+                        }
+                        showNotificationOverlay(fullMessage);
                         setTimeout(() => recentlyBlocked.delete(displayName), 5000);
                     }
                 }
@@ -640,6 +695,53 @@ ipcMain.on('stop-blocking', () => {
   if (blockingProcess) { try { blockingProcess.kill(); } catch(e){} blockingProcess = null; }
   if (webBlockingProcess) { try { webBlockingProcess.kill(); } catch(e){} webBlockingProcess = null; }
 });
+
+// --- NOTIFICATION OVERLAY ---
+let notificationWindow = null;
+
+function showNotificationOverlay(appName) {
+  // Clean up the app name (remove debug prefixes, .exe, etc.)
+  let cleanName = appName
+      .replace(/^Blocked:\s*/i, '')
+      .replace(/\s*\(restricted site\)\s*$/i, '')
+      .replace(/\.exe$/i, '')
+      .trim();
+  
+  // Capitalize first letter
+  if (cleanName.length > 0) {
+      cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+  }
+
+  if (notificationWindow) {
+    try { notificationWindow.close(); } catch(e) {}
+  }
+  
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
+
+  notificationWindow = new BrowserWindow({
+    x: 0, y: 0, width, height,
+    transparent: true, frame: false,
+    alwaysOnTop: true, skipTaskbar: true,
+    focusable: false, hasShadow: false, resizable: false,
+    webPreferences: { 
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  notificationWindow.setIgnoreMouseEvents(true);
+  
+  const overlayPath = path.join(__dirname, 'notification_overlay.html');
+  notificationWindow.loadFile(overlayPath, { query: { appName: cleanName } });
+
+  setTimeout(() => { 
+    if (notificationWindow) {
+      try { notificationWindow.close(); } catch(e) {}
+      notificationWindow = null;
+    }
+  }, 4000);
+}
 
 // --- FULLSCREEN RIPPLE OVERLAY ---
 let rippleOverlayWindow = null;
@@ -738,5 +840,30 @@ ipcMain.on('stop-usb-monitoring', () => {
         try { usbMonitorProcess.kill(); } catch(e){}
         usbMonitorProcess = null;
     }
+});
+
+ipcMain.handle('check-usb-present', async () => {
+    return new Promise((resolve) => {
+        const psScript = `
+            $ErrorActionPreference = 'SilentlyContinue'
+            $usbDrives = Get-WmiObject Win32_DiskDrive | Where-Object { $_.InterfaceType -eq 'USB' -and $_.MediaType -match 'Removable' -and $_.Size -gt 0 }
+            if ($usbDrives) { Write-Output "PRESENT" } else { Write-Output "NOT_PRESENT" }
+        `;
+        const child = spawn('powershell', ['-NoProfile', '-Command', '-']);
+        let output = '';
+        child.stdout.on('data', (d) => output += d.toString());
+        child.on('close', () => {
+            if (output.includes('PRESENT') && !output.includes('NOT_PRESENT')) {
+                console.log('[USB] Zen key already plugged in.');
+                resolve(true);
+            } else {
+                console.log('[USB] No removable USB drive detected.');
+                resolve(false);
+            }
+        });
+        child.on('error', () => resolve(false));
+        child.stdin.write(psScript);
+        child.stdin.end();
+    });
 });
 

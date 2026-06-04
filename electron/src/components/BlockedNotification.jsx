@@ -45,9 +45,9 @@ export default function BlockedNotification() {
         <div className="blocked-notifications">
             {notifications.map(n => (
                 <div key={n.id} className="blocked-toast">
-                    <span className="blocked-icon">🚫</span>
+                    <span className="blocked-title">Stay Focused</span>
                     <span className="blocked-message">
-                        <strong>{n.appName}</strong> is blocked in your focus session
+                        {n.appName} is blocked during your<br />focus session.
                     </span>
                 </div>
             ))}

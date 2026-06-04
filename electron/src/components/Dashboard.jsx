@@ -12,6 +12,25 @@ export default function Dashboard() {
   const [selectedWebsites, setSelectedWebsites] = useState([]);
   const [isBlocking, setIsBlocking] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
+
+  const isInitialMount = useRef(true);
+
+  // Load from IPC on mount
+  useEffect(() => {
+    window.electron?.loadConfig?.().then(config => {
+      if (config.selectedApps) setSelectedApps(config.selectedApps);
+      if (config.selectedWebsites) setSelectedWebsites(config.selectedWebsites);
+    });
+  }, []);
+
+  // Save to IPC on change
+  useEffect(() => {
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+    }
+    window.electron?.saveConfig?.({ selectedApps, selectedWebsites });
+  }, [selectedApps, selectedWebsites]);
   const [showInsertKey, setShowInsertKey] = useState(false);
   const zenBtnRef = useRef(null);
   
@@ -21,7 +40,15 @@ export default function Dashboard() {
   useEffect(() => {
     showInsertKeyRef.current = showInsertKey;
     if (showInsertKey) {
-        setIsUsbInserted(false); // Reset success state when reopening popup
+        setIsUsbInserted(false);
+        // Check if a removable USB flash drive is already plugged in
+        window.electron?.checkUsbPresent?.().then(isPresent => {
+            if (isPresent) {
+                console.log("Zen key already present.");
+                setIsUsbInserted(true);
+            }
+        });
+        // Also listen for NEW insertions while popup is open
         window.electron?.startUsbMonitoring?.();
     } else {
         window.electron?.stopUsbMonitoring?.();
@@ -58,12 +85,7 @@ export default function Dashboard() {
     // Trigger ripple from center of screen since popup is centered
     window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: 0.5, y: 0.5 } }));
     
-    // Trigger Fullscreen Ripple Overlay via Electron
-    if (window.electron?.triggerFullscreenRipple) {
-      const screenX = window.screenX + window.innerWidth / 2;
-      const screenY = window.screenY + window.innerHeight / 2;
-      window.electron.triggerFullscreenRipple({ screenX, screenY });
-    }
+    // Fullscreen Ripple Overlay removed per user request
 
     window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites });
     setIsBlocking(true);

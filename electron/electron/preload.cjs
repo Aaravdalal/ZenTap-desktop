@@ -30,5 +30,8 @@ contextBridge.exposeInMainWorld('electron', {
   onUsbInserted: (callback) => {
     ipcRenderer.removeAllListeners('usb-inserted'); // Prevent duplicate listeners
     ipcRenderer.on('usb-inserted', () => callback());
-  }
+  },
+  checkUsbPresent: () => ipcRenderer.invoke('check-usb-present'),
+  loadConfig: () => ipcRenderer.invoke('load-config'),
+  saveConfig: (data) => ipcRenderer.send('save-config', data)
 });
