@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenTap - Stay Focused</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: transparent;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            -webkit-app-region: no-drag;
+        }
+        
+        /* Semi-transparent backdrop */
+        .backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 40px;
+            max-width: 480px;
+            width: 90%;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        @keyframes slideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .icon {
+            font-size: 72px;
+            margin-bottom: 24px;
+            animation: breathe 3s ease-in-out infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .domain {
+            font-size: 18px;
+            color: #a0a8b8;
+            margin-bottom: 32px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .timer-circle {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 32px;
+        }
+        
+        .timer-circle svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        
+        .timer-circle .bg-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 8;
+        }
+        
+        .timer-circle .progress-circle {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 377;
+            stroke-dashoffset: 377;
+            transition: stroke-dashoffset 1s linear;
+        }
+        
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            font-weight: 300;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+        }
+        
+        .message {
+            font-size: 15px;
+            color: #8890a0;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        
+        .message strong {
+            color: #ccc;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24, #f7d794);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="backdrop"></div>
+    
+    <div class="container">
+        <div class="icon">🧘</div>
+        <h1>Stay Focused</h1>
+        <div class="domain" id="domainDisplay">Loading...</div>
+        
+        <div class="timer-circle">
+            <svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ff6b6b"/>
+                        <stop offset="50%" stop-color="#ee5a24"/>
+                        <stop offset="100%" stop-color="#f7d794"/>
+                    </linearGradient>
+                </defs>
+                <circle class="bg-circle" cx="50" cy="50" r="47"/>
+                <circle class="progress-circle" id="progressCircle" cx="50" cy="50" r="47"/>
+            </svg>
+            <div class="timer-text" id="timerText">5</div>
+        </div>
+        
+        <p class="message">
+            This site is blocked during your focus session.<br>
+            You can continue in <strong id="countdownText">5</strong> seconds.
+        </p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn btn-primary" id="waitBtn" disabled>Wait & Continue</button>
+            <button class="btn btn-secondary" id="closeBtn">Close Tab</button>
+        </div>
+    </div>
+
+    <script>
+        // Get initial data from preload
+        let domain = 'blocked-site';
+        let fullTitle = '';
+        let delaySeconds = 5;
+        
+        if (window.overlayAPI && window.overlayAPI.getInitialData) {
+            const data = window.overlayAPI.getInitialData();
+            domain = data.domain;
+            fullTitle = data.fullTitle;
+            delaySeconds = data.delaySeconds;
+        }
+        
+        // DOM elements
+        const domainDisplay = document.getElementById('domainDisplay');
+        const timerText = document.getElementById('timerText');
+        const countdownText = document.getElementById('countdownText');
+        const progressCircle = document.getElementById('progressCircle');
+        const progressFill = document.getElementById('progressFill');
+        const waitBtn = document.getElementById('waitBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        
+        // Circle circumference = 2 * π * r = 2 * π * 47 ≈ 295
+        // Using 377 for stroke-dasharray (visual adjustment)
+        const CIRCUMFERENCE = 295;
+        progressCircle.style.strokeDasharray = CIRCUMFERENCE;
+        progressCircle.style.strokeDashoffset = CIRCUMFERENCE;
+        
+        // Update display
+        domainDisplay.textContent = domain;
+        timerText.textContent = delaySeconds;
+        countdownText.textContent = delaySeconds;
+        
+        let remaining = delaySeconds;
+        const interval = 1000; // 1 second
+        
+        function updateTimer() {
+            remaining--;
+            
+            // Update text
+            timerText.textContent = remaining;
+            countdownText.textContent = remaining;
+            
+            // Update circular progress
+            const progress = (delaySeconds - remaining) / delaySeconds;
+            const offset = CIRCUMFERENCE * (1 - progress);
+            progressCircle.style.strokeDashoffset = offset;
+            
+            // Update linear progress bar
+            progressFill.style.width = (progress * 100) + '%';
+            
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                onDelayComplete();
+            }
+        }
+        
+        function onDelayComplete() {
+            waitBtn.disabled = false;
+            waitBtn.textContent = 'Continue';
+            countdownText.textContent = '0';
+            
+            // Notify main process
+            if (window.overlayAPI && window.overlayAPI.onDelayComplete) {
+                window.overlayAPI.onDelayComplete(domain);
+            }
+        }
+        
+        // Start countdown
+        const timerInterval = setInterval(updateTimer, interval);
+        
+        // Button handlers
+        waitBtn.addEventListener('click', () => {
+            if (!waitBtn.disabled) {
+                if (window.overlayAPI && window.overlayAPI.onDelayComplete) {
+                    window.overlayAPI.onDelayComplete(domain);
+                }
+            }
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            // Try to close the browser tab via keyboard shortcut
+            // This is a best-effort attempt
+            window.close();
+        });
+        
+        // Notify main process we're ready
+        if (window.overlayAPI && window.overlayAPI.onReady) {
+            window.overlayAPI.onReady();
+        }
+        
+        // Handle keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.close();
+            }
+            if (e.key === 'Enter' && !waitBtn.disabled) {
+                waitBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
