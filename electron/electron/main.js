@@ -21,6 +21,7 @@ let mainWindow;
 let tray = null;
 let isQuitting = false;
 let isDev = process.env.NODE_ENV === 'development';
+let blockedOverlayWindow = null;
 
 // Screen Time State
 let dailyUsageMinutes = 0;
@@ -192,11 +193,11 @@ async function discoverApps() {
 
 function createWindow() {
   console.log("createWindow: Creating BrowserWindow instance...");
-  mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 850,
-    transparent: true,
-    frame: false,
+    if (mainWindow) return;
+    mainWindow = new BrowserWindow({
+      width: 1100,
+      height: 850,
+      frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -593,98 +594,31 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
     } catch (err) { console.error('App spawn error:', err); }
   }
 
-  // --- WEB BLOCKING ---
+// --- WEB BLOCKING (Proxy-based) ---
   if (web && web.length > 0) {
-      const keywords = web.map(w => {
-          let k = (w.keyword || w).toString().split('.')[0].replace(/'/g, "''");
-          return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special chars
-      }).filter(k => k.length > 0);
-      
-      const pattern = keywords.join('|');
-
-    if (pattern.length > 0) {
-      const webScript = "[Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; " +
-        "[Reflection.Assembly]::LoadWithPartialName('UIAutomationClient') | Out-Null; " +
-        "Add-Type -TypeDefinition @' " +
-        "using System; " +
-        "using System.Runtime.InteropServices; " +
-        "using System.Text; " +
-        "public class WinApi { " +
-        "  [DllImport(\"user32.dll\")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam); " +
-        "  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam); " +
-        "  [DllImport(\"user32.dll\")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount); " +
-        "  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); " +
-        "  [DllImport(\"user32.dll\")] public static extern void GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId); " +
-        "} " +
-        "'@; " +
-        "while($true) { " +
-        "  Write-Output \"DEBUG: HEARTBEAT - SCANNING\"; " +
-        "  [WinApi]::EnumWindows({ " +
-        "    param($hWnd, $lParam) " +
-        "    $sb = New-Object System.Text.StringBuilder 256; " +
-        "    if ([WinApi]::GetWindowText($hWnd, $sb, $sb.Capacity) -gt 0) { " +
-        "      $title = $sb.ToString(); " +
-        "      $matched = $false; " +
-        "      if ($title -match '" + pattern + "') { $matched = $true; Write-Output \"DEBUG: Match Title: $title\"; } " +
-        "      if (-not $matched) { " +
-        "        try { " +
-        "          $element = [System.Windows.Automation.AutomationElement]::FromHandle($hWnd); " +
-        "          if ($element) { " +
-        "            $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.AutomationControlType]::Edit); " +
-        "            $bar = $element.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition); " +
-        "            if ($bar) { " +
-        "              $url = $bar.GetCurrentPropertyValue([System.Windows.Automation.ValuePattern]::ValueProperty); " +
-        "              if ($url -match '" + pattern + "') { $matched = $true; Write-Output \"DEBUG: Match URL: $url\"; } " +
-        "            } " +
-        "          } " +
-        "        } catch {} " +
-        "      } " +
-        "      if ($matched) { " +
-        "        [WinApi]::SetForegroundWindow($hWnd) | Out-Null; " +
-        "        Start-Sleep -Milliseconds 250; " +
-        "        [System.Windows.Forms.SendKeys]::SendWait('^{w}'); " +
-        "        Write-Output \"Blocked: $title\"; " +
-        "      } " +
-        "    } " +
-        "    return $true; " +
-        "  }, 0) | Out-Null; " +
-        "  Start-Sleep -Milliseconds 400 " +
-        "}";
- 
-       try {
-           console.log('[WebBlock] Spawning PowerShell with pattern:', pattern);
-           webBlockingProcess = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', webScript]);
-           
-           webBlockingProcess.stdout.on('data', (data) => {
-                console.log('[WebBlock STDOUT]:', data.toString().trim());
-                const names = data.toString().trim().split(/\r?\n/).filter(Boolean);
-                for (const name of names) {
-                    const trimmed = name.trim();
-                    if (trimmed.startsWith('DEBUG:')) continue;
-                    // Extract the clean name from "Blocked: xyz" format
-                    const blockedMatch = trimmed.match(/^Blocked:\s*(.+)$/i);
-                    const displayName = blockedMatch ? blockedMatch[1] : trimmed;
-                    if (!recentlyBlocked.has(displayName)) {
-                        recentlyBlocked.add(displayName);
-                        const fullMessage = displayName + ' (restricted site)';
-                        if (mainWindow) {
-                            mainWindow.webContents.send('app-blocked', fullMessage);
-                        }
-                        showNotificationOverlay(fullMessage);
-                        setTimeout(() => recentlyBlocked.delete(displayName), 5000);
-                    }
-                }
-            });
-
-           webBlockingProcess.stderr.on('data', (data) => {
-               console.error('[WebBlock STDERR]:', data.toString().trim());
-           });
-
-           webBlockingProcess.on('exit', (code) => {
-               console.log('[WebBlock] Process exited with code:', code);
-           });
-      } catch (err) { console.error('Web spawn error:', err); }
-    }
+    const domains = web.map(w => (w.keyword || w).toString().replace(/'/g, "''")).filter(k => k.length > 0);
+    
+    // Initialize and start proxy-based blocker
+    const { getBlockerInstance } = require('./proxy/websiteBlockerProxy');
+    const blocker = getBlockerInstance({ port: 8080, delaySeconds: 5 });
+    
+    // Listen for blocked events to close tabs and show overlay
+    blocker.on('blocked', (info) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('website-blocked', info);
+        showBlockedOverlay(info.hostname);
+      }
+    });
+    
+    blocker.start(domains).then(success => {
+      if (success) {
+        console.log('[WebBlock] Proxy-based website blocking started successfully');
+      } else {
+        console.error('[WebBlock] Failed to start proxy-based blocking');
+      }
+    }).catch(err => {
+      console.error('[WebBlock] Error starting proxy:', err);
+    });
   }
 });
 
@@ -741,6 +675,44 @@ function showNotificationOverlay(appName) {
       notificationWindow = null;
     }
   }, 4000);
+}
+
+// --- BLOCKED WEBSITE OVERLAY ---
+function showBlockedOverlay(domain) {
+  if (blockedOverlayWindow) {
+    try { blockedOverlayWindow.close(); } catch(e) {}
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
+
+  const overlayPath = path.join(__dirname, 'delay_overlay.html');
+  if (!fs.existsSync(overlayPath)) {
+    console.error(`ERROR: Blocked overlay file missing at: ${overlayPath}`);
+    return;
+  }
+
+  blockedOverlayWindow = new BrowserWindow({
+    x: 0, y: 0, width, height,
+    transparent: true, frame: false,
+    alwaysOnTop: true, skipTaskbar: true,
+    focusable: false, hasShadow: false, resizable: false,
+    webPreferences: { 
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  blockedOverlayWindow.setIgnoreMouseEvents(true);
+  
+  blockedOverlayWindow.loadFile(overlayPath, { query: { domain, delaySeconds: 5 } });
+
+  setTimeout(() => { 
+    if (blockedOverlayWindow) {
+      try { blockedOverlayWindow.close(); } catch(e) {}
+      blockedOverlayWindow = null;
+    }
+  }, 6000);
 }
 
 // --- FULLSCREEN RIPPLE OVERLAY ---

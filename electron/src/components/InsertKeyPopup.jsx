@@ -6,32 +6,62 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
 
   useEffect(() => {
     if (isSuccess) {
-      // Wait for animation to finish, then call onInsert
       const timer = setTimeout(() => {
          setIsClosing(true);
          setTimeout(() => onInsert(), 300);
-      }, 1500); // Wait 1.5 seconds to show the animation
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [isSuccess, onInsert]);
 
   const handleClose = () => {
-    if (isSuccess) return; // Prevent closing manually if already successful
+    if (isSuccess) return;
     setIsClosing(true);
     setTimeout(() => onClose(), 300);
+  };
+
+  const handleBypassClick = () => {
+    if (isSuccess) return;
+    
+    // Bypass USB check and proceed directly
+    setIsClosing(true);
+    
+    // Immediately initialize Zen mode
+    setTimeout(() => {
+      onInsert();
+      
+      // Notify main process to skip USB requirement
+      if (window.electron?.invoke) {
+        window.electron.invoke('usb-bypass-activated');
+      }
+    }, 0);
   };
 
   return (
     <>
       <div className={`insert-key-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}></div>
       <div className={`insert-key-popup ${isClosing ? 'closing' : ''}`}>
+        {/* Bypass button for testing - top left corner */}
+        {!isSuccess && (
+          <button 
+            className="insert-key-bypass" 
+            onClick={handleBypassClick}
+            title="Testing Bypass - Skip USB requirement">
+            ∞
+          </button>
+        )}
+        
         {!isSuccess && <button className="insert-key-close" onClick={handleClose}>✕</button>}
         
         <div className="insert-key-header">
            <h2 className="insert-key-title">{isSuccess ? "Zen-Key Connected" : "Insert Zen-Key"}</h2>
-           <p className="insert-key-subtitle">{isSuccess ? "Initializing Zen mode..." : "Plug the Zen Key into your computer"}</p>
+           <p className="insert-key-subtitle">
+             {isSuccess 
+               ? "Initializing Zen mode..." 
+               : "Plug the Zen Key into your computer"}
+           </p>
         </div>
-        
+         
         <div className="insert-key-icon-container">
            {isSuccess ? (
              <div className="google-pay-checkmark-wrapper">
@@ -51,7 +81,7 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
              />
            )}
         </div>
-        
+         
         {!isSuccess && <button className="insert-key-cancel" onClick={handleClose}>Cancel</button>}
       </div>
     </>

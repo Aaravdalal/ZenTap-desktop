@@ -119,7 +119,7 @@ export default function Dashboard() {
           </div>
           {showSettings && <SettingsMenu onClose={() => setShowSettings(false)} />}
           
-          <div className="window-controls" style={{ display: 'flex', marginLeft: '10px', marginRight: '-20px' }}>
+          <div className="window-controls">
             <div className="win-btn minimize" onClick={() => window.electron?.minimizeApp?.()}>
               <svg viewBox="0 0 10 1" width="10" height="1"><path d="M0,0h10v1H0z" fill="currentColor"/></svg>
             </div>

@@ -15,15 +15,16 @@
   left: 0;
   width: 100vw;
   background: white;
-  border-radius: 32px 32px 0 0;
   padding: 40px 30px 50px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 1000;
+  box-sizing: border-box;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
   animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  box-sizing: border-box;
+  border-radius: 0;
+  /* Completely flat corners, like a normal window */
 }
 
 .insert-key-close {
@@ -46,6 +47,29 @@
 
 .insert-key-close:hover {
   background: #e0e0e0;
+}
+
+.insert-key-bypass {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #007AFF;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  z-index: 1001;
+  padding: 0;
+}
+
+.insert-key-bypass:hover {
+  background: #0066e6;
 }
 
 .insert-key-header {

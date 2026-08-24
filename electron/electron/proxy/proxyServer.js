@@ -120,7 +120,8 @@ class ProxyServer extends EventEmitter {
     console.log(`[Proxy] HTTP Request: ${req.method} ${hostname}${url.pathname}`);
     
     if (this.isBlocked(hostname)) {
-      this.serveDelayPage(res, hostname);
+      res.writeHead(403, { 'Content-Type': 'text/plain', 'Connection': 'close' });
+      res.end('Blocked');
       this.emit('blocked', { hostname, url: req.url, type: 'HTTP' });
       return;
     }
@@ -139,12 +140,10 @@ class ProxyServer extends EventEmitter {
     console.log(`[Proxy] CONNECT Request: ${hostPort}`);
     
     if (this.isBlocked(hostname)) {
-      // Send 200 Connection Established then serve delay page
-      clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-      
-      // Create a fake HTTPS response with delay page
-      this.serveDelayPageToSocket(clientSocket, hostname);
-      this.emit('blocked', { hostname, url: hostPort, type: 'HTTPS' });
+      // Immediately terminate HTTPS connection
+      clientSocket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      clientSocket.end();
+      this.emit('blocked', { hostname: hostname, url: hostPort, type: 'HTTPS' });
       return;
     }
     
