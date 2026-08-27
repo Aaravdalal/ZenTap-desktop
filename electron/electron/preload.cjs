@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electron', {
   showError: (title, body) => ipcRenderer.send('show-error', title, body),
   fetchFavicon: (domain) => ipcRenderer.invoke('fetch-favicon', domain),
   getScreenTime: () => ipcRenderer.invoke('get-screen-time'),
+  getTotalScreenTime: () => ipcRenderer.invoke('get-total-screen-time'),
   onUsageUpdated: (callback) => {
     ipcRenderer.on('usage-updated', (event, minutes) => callback(minutes));
   },

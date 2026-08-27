@@ -12,27 +12,24 @@
 /* New Global Model Layer for Instant Results */
 .global-model-container {
   position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 400px;
+  top: 130px;
+  left: 40px;
+  width: 380px;
+  height: 320px;
   z-index: 5;
   pointer-events: none;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  transition: opacity 0.4s ease-in-out;
 }
 
 .global-model-container.hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%);
 }
 
 .global-model-container.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%);
 }

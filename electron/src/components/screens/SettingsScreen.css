@@ -1,0 +1,105 @@
+.settings-screen {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-card {
+  border-radius: 24px;
+  background: var(--zt-pill-bg);
+  padding: 22px 24px;
+  cursor: pointer;
+}
+
+.settings-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-card-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.settings-card-desc {
+  font-size: 14px;
+  color: #555;
+  margin: 10px 0 0 0;
+  line-height: 1.4;
+}
+
+.settings-card-group {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.settings-row-divider {
+  height: 1px;
+  background: #ddd;
+  margin: 12px 0;
+}
+
+.settings-toggle {
+  width: 46px;
+  height: 26px;
+  border-radius: var(--zt-radius-pill);
+  background: #ccc;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.settings-toggle.on {
+  background: var(--zt-black);
+  justify-content: flex-end;
+}
+
+.settings-toggle-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.settings-refer-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 130px;
+}
+
+.settings-refer-icon {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+.settings-footer {
+  text-align: right;
+  font-size: 12px;
+  color: #999;
+  margin-top: 24px;
+}

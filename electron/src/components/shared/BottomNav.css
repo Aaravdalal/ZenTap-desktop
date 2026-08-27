@@ -1,0 +1,46 @@
+.bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 20px;
+  -webkit-app-region: no-drag;
+}
+
+.bottom-nav-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: var(--zt-radius-pill);
+  background: var(--zt-card-bg);
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.bottom-nav-tab:hover {
+  background: #fbfbfb;
+}
+
+.bottom-nav-tab.active {
+  color: #000;
+  font-weight: 700;
+}
+
+.bottom-nav-indicator {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--zt-pink);
+}

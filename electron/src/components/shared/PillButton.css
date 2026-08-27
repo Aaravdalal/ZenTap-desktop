@@ -1,0 +1,48 @@
+.pill-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: var(--zt-radius-pill);
+  font-size: 17px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.pill-btn:active {
+  transform: scale(0.98);
+}
+
+.pill-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.pill-btn-black {
+  background-color: var(--zt-black);
+  color: #ffffff;
+}
+
+.pill-btn-black:hover {
+  filter: brightness(1.25);
+}
+
+.pill-btn-blue {
+  background-color: var(--zt-blue);
+  color: #ffffff;
+}
+
+.pill-btn-blue:hover {
+  background-color: var(--zt-blue-hover);
+}
+
+.pill-btn-pink {
+  background-color: var(--zt-pink);
+  color: #000000;
+}
+
+.pill-btn-pink:hover {
+  background-color: var(--zt-pink-strong);
+}

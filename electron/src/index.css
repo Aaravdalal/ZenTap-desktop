@@ -4,10 +4,25 @@
   font-family: 'Roboto', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  
+
   color-scheme: light;
   background-color: transparent;
   color: #000000;
+
+  /* ZenTap design tokens (from UI References) */
+  --zt-page-bg: #d9d9d9;
+  --zt-card-bg: #ffffff;
+  --zt-pill-bg: #eeeeee;
+  --zt-pill-bg-strong: #e4e4e4;
+  --zt-black: #000000;
+  --zt-blue: #1a8dff;
+  --zt-blue-hover: #0f7ae8;
+  --zt-pink: #ffa3a8;
+  --zt-pink-strong: #ff8f96;
+  --zt-text-muted: #8a8a8a;
+  --zt-radius-card: 36px;
+  --zt-radius-pill: 999px;
+  --zt-radius-sm: 16px;
 }
 
 body {

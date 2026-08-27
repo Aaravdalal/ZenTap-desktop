@@ -25,6 +25,7 @@ let blockedOverlayWindow = null;
 
 // Screen Time State
 let dailyUsageMinutes = 0;
+let totalUsageMinutes = 0;
 const USAGE_FILE = path.join(app.getPath('userData'), 'daily_usage.json');
 
 // Cache for instant loading
@@ -206,7 +207,7 @@ function createWindow() {
       sandbox: true 
     },
     title: "ZenTap For Windows",
-    icon: path.join(__dirname, '../public/z_icon.png')
+    icon: path.join(__dirname, '../public/app_icon.png')
   });
   console.log("createWindow: BrowserWindow instance created.");
 
@@ -300,7 +301,11 @@ ipcMain.handle('load-config', async () => {
 
 ipcMain.on('save-config', (e, configData) => {
     try {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(configData));
+        let existing = {};
+        if (fs.existsSync(CONFIG_FILE)) {
+            try { existing = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) {}
+        }
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify({ ...existing, ...configData }));
     } catch (err) {
         console.error("Save config failed:", err);
     }
@@ -310,6 +315,7 @@ async function loadUsage() {
     try {
         if (fs.existsSync(USAGE_FILE)) {
             const data = JSON.parse(await readFile(USAGE_FILE, 'utf8'));
+            totalUsageMinutes = data.totalMinutes || 0;
             const today = new Date().toDateString();
             if (data.date === today) {
                 dailyUsageMinutes = data.minutes || 0;
@@ -322,7 +328,7 @@ async function loadUsage() {
 
 async function saveUsage() {
     try {
-        const data = { date: new Date().toDateString(), minutes: dailyUsageMinutes };
+        const data = { date: new Date().toDateString(), minutes: dailyUsageMinutes, totalMinutes: totalUsageMinutes };
         await writeFile(USAGE_FILE, JSON.stringify(data));
     } catch (e) { console.error("Save usage failed:", e); }
 }
@@ -333,6 +339,7 @@ function startUsageTracking() {
         const idleTime = powerMonitor.getSystemIdleTime();
         if (idleTime < 60) {
             dailyUsageMinutes += 1;
+            totalUsageMinutes += 1;
             saveUsage();
             if (mainWindow) {
                  mainWindow.webContents.send('usage-updated', dailyUsageMinutes);
@@ -355,7 +362,7 @@ app.whenReady().then(async () => {
     console.log("createWindow() completed successfully.");
 
     // Add Tray Icon
-    tray = new Tray(path.join(__dirname, '../public/z_icon.png'));
+    tray = new Tray(path.join(__dirname, '../public/app_icon.png'));
     const contextMenu = Menu.buildFromTemplate([
       { label: 'Show ZenTap', click: () => mainWindow && mainWindow.show() },
       { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
@@ -393,6 +400,10 @@ const recentlyBlocked = new Set();
 
 ipcMain.handle('get-screen-time', async () => {
     return dailyUsageMinutes;
+});
+
+ipcMain.handle('get-total-screen-time', async () => {
+    return totalUsageMinutes;
 });
 
 ipcMain.handle('get-installed-apps', async () => {
