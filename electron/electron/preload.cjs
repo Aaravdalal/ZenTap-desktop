@@ -22,9 +22,6 @@ contextBridge.exposeInMainWorld('electron', {
   onUsageUpdated: (callback) => {
     ipcRenderer.on('usage-updated', (event, minutes) => callback(minutes));
   },
-  onAppBlocked: (callback) => {
-    ipcRenderer.on('app-blocked', (event, appName) => callback(appName));
-  },
   triggerFullscreenRipple: (coords) => ipcRenderer.send('trigger-fullscreen-ripple', coords),
   startUsbMonitoring: () => ipcRenderer.send('start-usb-monitoring'),
   stopUsbMonitoring: () => ipcRenderer.send('stop-usb-monitoring'),

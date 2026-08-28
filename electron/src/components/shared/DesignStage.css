@@ -1,0 +1,61 @@
+.ds-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  -webkit-app-region: drag;
+}
+
+.ds-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2135px;
+  height: 1281px;
+  transform-origin: center center;
+}
+
+.ds-el {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ds-hit {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 24px;
+  -webkit-app-region: no-drag;
+}
+
+.ds-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ds-layer-slot {
+  position: absolute;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.ds-title {
+  position: absolute;
+  left: 171px;
+  top: 65px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 50px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}

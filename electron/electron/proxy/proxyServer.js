@@ -4,11 +4,9 @@
  * Intercepts HTTP/CONNECT requests and blocks specified domains
  */
 
-const http = require('http');
-const https = require('https');
-const net = require('net');
-const { URL } = require('url');
-const { EventEmitter } = require('events');
+import http from 'http';
+import net from 'net';
+import { EventEmitter } from 'events';
 
 class ProxyServer extends EventEmitter {
   constructor(options = {}) {
@@ -17,10 +15,7 @@ class ProxyServer extends EventEmitter {
     this.blockedDomains = new Set(options.blockedDomains || []);
     this.server = null;
     this.isRunning = false;
-    
-    // Delay page configuration
-    this.delaySeconds = options.delaySeconds || 5;
-    this.delayPagePath = options.delayPagePath || null;
+    this.activeSockets = new Set();
   }
 
   /**
@@ -82,7 +77,17 @@ class ProxyServer extends EventEmitter {
       
       this.server.on('connect', (req, clientSocket, head) => this.handleConnect(req, clientSocket, head));
       this.server.on('error', (err) => this.handleError(err));
-      
+
+      // Track every raw connection ourselves so stop() can force-close them.
+      // closeAllConnections() doesn't reliably reach a socket once it's been
+      // hijacked for CONNECT tunneling, so relying on it (or on server.close()
+      // alone) can leave "stop blocking" hanging on a real browser's
+      // long-lived connections (push/notification channels, keep-alives).
+      this.server.on('connection', (socket) => {
+        this.activeSockets.add(socket);
+        socket.on('close', () => this.activeSockets.delete(socket));
+      });
+
       this.server.listen(this.port, '127.0.0.1', () => {
         this.isRunning = true;
         console.log(`[Proxy] Server listening on 127.0.0.1:${this.port}`);
@@ -99,6 +104,10 @@ class ProxyServer extends EventEmitter {
   async stop() {
     return new Promise((resolve) => {
       if (this.server) {
+        for (const socket of this.activeSockets) {
+          socket.destroy();
+        }
+        this.activeSockets.clear();
         this.server.close(() => {
           this.isRunning = false;
           console.log('[Proxy] Server stopped');
@@ -118,10 +127,13 @@ class ProxyServer extends EventEmitter {
     const hostname = url.hostname.toLowerCase();
     
     console.log(`[Proxy] HTTP Request: ${req.method} ${hostname}${url.pathname}`);
-    
+
     if (this.isBlocked(hostname)) {
-      res.writeHead(403, { 'Content-Type': 'text/plain', 'Connection': 'close' });
-      res.end('Blocked');
+      // Don't serve any page in the browser tab - just kill the connection so
+      // the browser shows its own "can't reach this site" state. The Electron
+      // notification overlay (main.js, triggered by the 'blocked' event) is
+      // what actually tells the user their site was blocked.
+      req.socket.destroy();
       this.emit('blocked', { hostname, url: req.url, type: 'HTTP' });
       return;
     }
@@ -140,9 +152,9 @@ class ProxyServer extends EventEmitter {
     console.log(`[Proxy] CONNECT Request: ${hostPort}`);
     
     if (this.isBlocked(hostname)) {
-      // Immediately terminate HTTPS connection
-      clientSocket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
-      clientSocket.end();
+      // Immediately terminate the connection - no page, just closed, same as
+      // the HTTP path. The overlay (main.js) handles user-facing feedback.
+      clientSocket.destroy();
       this.emit('blocked', { hostname: hostname, url: hostPort, type: 'HTTPS' });
       return;
     }
@@ -157,120 +169,6 @@ class ProxyServer extends EventEmitter {
   parseHostPort(url) {
     const [host, port] = url.split(':');
     return { hostname: host, port: parseInt(port) || 443 };
-  }
-
-  /**
-   * Serve delay page to HTTP response
-   */
-  serveDelayPage(res, hostname) {
-    const html = this.generateDelayPage(hostname);
-    res.writeHead(200, {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Length': Buffer.byteLength(html),
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-    res.end(html);
-  }
-
-  /**
-   * Serve delay page to raw socket (for HTTPS)
-   */
-  serveDelayPageToSocket(socket, hostname) {
-    const html = this.generateDelayPage(hostname);
-    const response = 
-      'HTTP/1.1 200 OK\r\n' +
-      'Content-Type: text/html; charset=utf-8\r\n' +
-      `Content-Length: ${Buffer.byteLength(html)}\r\n` +
-      'Connection: close\r\n' +
-      'Cache-Control: no-cache, no-store, must-revalidate\r\n' +
-      'Pragma: no-cache\r\n' +
-      'Expires: 0\r\n' +
-      '\r\n' +
-      html;
-    
-    socket.write(response);
-    socket.end();
-  }
-
-  /**
-   * Generate delay page HTML
-   */
-  generateDelayPage(hostname) {
-    const delayMs = this.delaySeconds * 1000;
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZenTap - Stay Focused</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-        }
-        .container {
-            text-align: center;
-            padding: 40px;
-            max-width: 400px;
-        }
-        .icon { font-size: 64px; margin-bottom: 20px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-        h1 { font-size: 28px; font-weight: 700; margin-bottom: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .domain { font-size: 18px; color: #a0a0b0; margin-bottom: 30px; font-family: monospace; }
-        .timer { font-size: 48px; font-weight: 300; font-variant-numeric: tabular-nums; margin-bottom: 20px; }
-        .message { font-size: 14px; color: #888; line-height: 1.6; }
-        .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #ff6b6b, #ee5a24); border-radius: 2px; width: 0%; transition: width 0.1s linear; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="icon">🧘</div>
-        <h1>Stay Focused</h1>
-        <div class="domain">${this.escapeHtml(hostname)}</div>
-        <div class="timer" id="timer">${this.delaySeconds}</div>
-        <div class="message">This site is blocked during your focus session.<br>You can continue in <span id="countdown">${this.delaySeconds}</span> seconds.</div>
-        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-    </div>
-    <script>
-        const delaySeconds = ${this.delaySeconds};
-        const timerEl = document.getElementById('timer');
-        const countdownEl = document.getElementById('countdown');
-        const progressEl = document.getElementById('progress');
-        let remaining = delaySeconds;
-        
-        const interval = setInterval(() => {
-            remaining--;
-            timerEl.textContent = remaining;
-            countdownEl.textContent = remaining;
-            progressEl.style.width = ((delaySeconds - remaining) / delaySeconds * 100) + '%';
-            
-            if (remaining <= 0) {
-                clearInterval(interval);
-                window.location.reload();
-            }
-        }, 1000);
-    </script>
-</body>
-</html>`;
-  }
-
-  /**
-   * Escape HTML for safe injection
-   */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   /**
@@ -316,11 +214,18 @@ class ProxyServer extends EventEmitter {
     
     serverSocket.on('error', (err) => {
       console.error('[Proxy] Tunnel error:', err.message);
-      clientSocket.end();
+      clientSocket.destroy();
     });
-    
-    clientSocket.on('error', (err) => {
-      serverSocket.end();
+
+    clientSocket.on('error', () => {
+      serverSocket.destroy();
+    });
+
+    // When stop() force-destroys the tracked incoming socket, make sure the
+    // outbound half of the tunnel (not tracked by the server itself) dies
+    // with it instead of lingering.
+    clientSocket.on('close', () => {
+      serverSocket.destroy();
     });
   }
 
@@ -337,4 +242,4 @@ class ProxyServer extends EventEmitter {
   }
 }
 
-module.exports = { ProxyServer };
+export { ProxyServer };

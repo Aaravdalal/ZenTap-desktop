@@ -1,74 +1,98 @@
-import { useState, useMemo } from 'react';
-import PageShell from '../shared/PageShell';
+import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import './StatisticsScreen.css';
 
+/*
+ * Statistics screen — laid out on the 2135 x 1281 artboard measured from
+ * UI References/Statistics.png.
+ */
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun'];
+const BAR_X = [144, 247, 350, 453, 555, 659, 763];
+const BAR_W = 77;
+const AXIS_X = 104;
+const AXIS_Y = 940;
+const CHART_TOP = 262;
 
-export default function StatisticsScreen({ selectedApps, selectedWebsites, screenTime, onSelectItem }) {
-  const [tab, setTab] = useState('apps');
+const ROW_Y = [345, 493, 641, 789];
+const COL_X = [1134, 1496];
 
-  const values = useMemo(() => {
-    // JS getDay(): 0=Sun..6=Sat -> map to Mon-first index
-    const todayIdx = (new Date().getDay() + 6) % 7;
-    const arr = new Array(7).fill(0);
-    arr[todayIdx] = screenTime;
-    return arr;
-  }, [screenTime]);
+export default function StatisticsScreen({
+  selectedApps = [],
+  selectedWebsites = [],
+  weekly,
+  tab = 'apps',
+  onChangeListTab,
+  onSelectItem,
+  activeTab,
+  onChangeTab,
+  onBack,
+}) {
+  const data = weekly && weekly.length === 7 ? weekly : [30, 45, 60, 55, 85, 96, 82];
+  const peak = Math.max(...data, 1);
+  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+  const usable = AXIS_Y - CHART_TOP - 10;
+  const barH = (v) => Math.max(4, Math.round((v / peak) * usable));
+  const avgY = AXIS_Y - Math.round((avg / peak) * usable);
 
-  const maxVal = Math.max(...values, 60);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const avgPct = (avg / maxVal) * 100;
-
-  const list = tab === 'apps' ? selectedApps : selectedWebsites;
+  const items = tab === 'apps' ? selectedApps : selectedWebsites;
 
   return (
-    <PageShell title="Statistics">
-      <div className="stats-screen">
-        <div className="stats-chart-col">
-          <div className="stats-chart">
-            <div className="stats-avg-line" style={{ bottom: `${avgPct}%` }}>
-              <span className="stats-avg-label">Avg</span>
-            </div>
-            <div className="stats-bars">
-              {values.map((v, i) => (
-                <div className="stats-bar-col" key={DAYS[i]}>
-                  <div className="stats-bar" style={{ height: `${Math.max((v / maxVal) * 100, 2)}%` }} />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="stats-day-labels">
-            {DAYS.map((d) => <span key={d}>{d}</span>)}
-          </div>
-        </div>
+    <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
+      <DImg src="back_button" x={55} y={49} w={79} h={79} />
+      <DHit className="ds-back-hit" x={55} y={49} w={79} h={79} onClick={onBack} aria-label="Back" />
+      <div className="ds-title">Statistics</div>
 
-        <div className="stats-list-col">
-          <div className="stats-tabs">
-            <button className={`stats-tab ${tab === 'apps' ? 'active' : ''}`} onClick={() => setTab('apps')}>Apps</button>
-            <button className={`stats-tab ${tab === 'websites' ? 'active' : ''}`} onClick={() => setTab('websites')}>Websites</button>
-          </div>
-          <div className="stats-list">
-            {list.length === 0 ? (
-              <div className="stats-empty">Nothing blocked yet — add {tab} from Home or Session.</div>
-            ) : (
-              list.map((item) => (
-                <button
-                  key={item.name || item.keyword}
-                  className="stats-list-row"
-                  onClick={() => onSelectItem({ type: tab, ...item })}
-                >
-                  <img
-                    src={item.icon || '/missing_icon.png'}
-                    alt=""
-                    onError={(e) => { e.target.src = '/missing_icon.png'; }}
-                  />
-                  <span>{item.name || item.keyword}</span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </PageShell>
+      {/* Weekly usage chart */}
+      <div className="st-axis-v" style={{ left: AXIS_X, top: CHART_TOP, height: AXIS_Y - CHART_TOP + 2 }} />
+      <div className="st-axis-h" style={{ left: AXIS_X, top: AXIS_Y, width: 866 - AXIS_X }} />
+      {data.map((v, i) => (
+        <div key={DAYS[i]} className="st-bar" style={{ left: BAR_X[i], width: BAR_W, top: AXIS_Y - 1 - barH(v), height: barH(v) }} />
+      ))}
+      <div className="st-avg-line" style={{ left: AXIS_X, top: avgY, width: 866 - AXIS_X }} />
+      <div className="st-avg-label" style={{ left: 62, top: avgY - 10 }}>Avg</div>
+      {DAYS.map((d, i) => (
+        <div key={d} className="st-day" style={{ left: BAR_X[i], width: BAR_W, top: 954 }}>{d}</div>
+      ))}
+
+      {/* Breakdown panel */}
+      <div className="st-panel" style={{ left: 1079, top: 128, width: 833, height: 859 }} />
+      <button
+        type="button"
+        className={`st-tab ${tab === 'apps' ? 'active' : ''}`}
+        style={{ left: 1128, top: 166, width: 328, height: 87 }}
+        onClick={() => onChangeListTab?.('apps')}
+      >
+        Apps
+      </button>
+      <button
+        type="button"
+        className={`st-tab ${tab === 'websites' ? 'active' : ''}`}
+        style={{ left: 1516, top: 166, width: 328, height: 87 }}
+        onClick={() => onChangeListTab?.('websites')}
+      >
+        Websites
+      </button>
+      <div className="st-divider" style={{ left: 1140, top: 300, width: 698 }} />
+
+      {[...Array(8)].map((_, i) => {
+        const x = COL_X[i % 2];
+        const y = ROW_Y[Math.floor(i / 2)];
+        const item = items[i];
+        return (
+          <button
+            key={i}
+            type="button"
+            className="st-row"
+            style={{ left: x, top: y, width: 490, height: 120 }}
+            onClick={() => item && onSelectItem?.(item)}
+            disabled={!item}
+          >
+            <span className="st-row-icon">
+              {item?.icon && <img src={item.icon} alt="" draggable={false} />}
+            </span>
+            <span className="st-row-name">{item ? (item.name || item.keyword) : 'Insert Name'}</span>
+          </button>
+        );
+      })}
+    </DesignStage>
   );
 }

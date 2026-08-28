@@ -19,9 +19,10 @@
 
 .main-app-window-controls {
   position: fixed;
-  top: 14px;
-  right: 18px;
-  z-index: 50;
+  /* Clear of the window's rounded corner, which scales with the design. */
+  top: calc(46px * var(--ds-scale, 0.6));
+  right: calc(56px * var(--ds-scale, 0.6));
+  z-index: 200;
   display: flex;
   gap: 10px;
   -webkit-app-region: no-drag;

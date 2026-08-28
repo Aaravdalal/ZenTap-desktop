@@ -1,0 +1,12 @@
+.ds-nav-hit {
+  border-radius: 34px;
+  transition: background-color 0.15s ease;
+}
+
+.ds-nav-hit:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ds-nav-hit:active {
+  background: rgba(0, 0, 0, 0.1);
+}

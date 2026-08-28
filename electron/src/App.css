@@ -4,32 +4,23 @@
   position: relative;
   background-color: white;
   overflow: hidden;
-  border-radius: 40px;
+  /* Matches the design's 96-unit card radius at the current stage scale. */
+  border-radius: calc(96px * var(--ds-scale, 0.6));
   box-sizing: border-box;
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* New Global Model Layer for Instant Results */
+/* Global 3D device layer: stays mounted, positioned on the design artboard. */
 .global-model-container {
-  position: absolute;
-  top: 130px;
-  left: 40px;
-  width: 380px;
-  height: 320px;
   z-index: 5;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   transition: opacity 0.4s ease-in-out;
 }
 
 .global-model-container.hidden {
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
 }
 
 .global-model-container.visible {
   opacity: 1;
-  pointer-events: auto;
 }

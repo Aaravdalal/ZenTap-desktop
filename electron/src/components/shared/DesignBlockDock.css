@@ -1,0 +1,60 @@
+.ds-dock-title {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 45px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.ds-count-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: #e0e0e0;
+  color: #000000;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 46px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  /* Own layer => grayscale antialiasing, matching the exported artwork. */
+  transform: translateZ(0);
+  pointer-events: none;
+  user-select: none;
+}
+
+.ds-slot-icon {
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.ds-dock-hit {
+  border-radius: 60px;
+  transition: background-color 0.15s ease;
+}
+
+.ds-dock-hit:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.ds-plus-hit {
+  border-radius: 20px;
+  transition: background-color 0.15s ease;
+}
+
+.ds-plus-hit:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.ds-plus-hit:active {
+  background: rgba(0, 0, 0, 0.12);
+}

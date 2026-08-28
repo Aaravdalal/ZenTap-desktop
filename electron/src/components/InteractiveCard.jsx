@@ -10,12 +10,15 @@ function Model({ url, rotation, scale }) {
   return <primitive object={clonedScene} rotation={rotation} scale={scale} />;
 }
 
-function Scene() {
+function Scene({ scale = 1 }) {
   const LIMIT_X = Math.PI;  
   const LIMIT_Y = Math.PI;  
   
   const BASE_X = Math.PI / 2; 
   const BASE_Y = -Math.PI / 2; 
+
+  // Keep the contact shadow just under the device as it scales.
+  const groundY = -0.3 * scale;
 
   const modelRef = useRef();
   const isDragging = useRef(false);
@@ -82,7 +85,7 @@ function Scene() {
       <pointLight position={[-10, -10, -10]} intensity={1} />
       <Environment preset="city" />
       
-      <group ref={modelRef}>
+      <group ref={modelRef} scale={scale}>
         <Center>
           <Model url="/USBC_key_v2.glb" rotation={[BASE_X, BASE_Y, 0]} scale={0.6} />
         </Center>
@@ -90,7 +93,7 @@ function Scene() {
 
       {/* Outer soft shadow gradient */}
       <ContactShadows 
-        position={[0, -1.8, 0]} 
+        position={[0, groundY, 0]} 
         opacity={0.25} 
         scale={12} 
         blur={3} 
@@ -99,7 +102,7 @@ function Scene() {
       />
       {/* Inner dark core shadow */}
       <ContactShadows 
-        position={[0, -1.8, 0]} 
+        position={[0, groundY, 0]} 
         opacity={0.5} 
         scale={8} 
         blur={1} 
@@ -110,16 +113,16 @@ function Scene() {
   );
 }
 
-export default React.memo(function InteractiveCard() {
+export default React.memo(function InteractiveCard({ scale = 1 }) {
   return (
-    <div className="interactive-card-canvas" style={{ pointerEvents: 'auto', width: '600px', height: '100%' }}>
+    <div className="interactive-card-canvas" style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
       <Canvas 
         key="zentap-canvas"
         camera={{ position: [0, -0.4, 5.2], fov: 45 }}
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         shadows
       >
-        <Scene />
+        <Scene scale={scale} />
       </Canvas>
     </div>
   );

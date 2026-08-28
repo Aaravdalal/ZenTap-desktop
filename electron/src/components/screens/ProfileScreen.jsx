@@ -1,114 +1,75 @@
-import { useState, useEffect, useRef } from 'react';
-import { ImagePlus, Trash2 } from 'lucide-react';
-import PageShell from '../shared/PageShell';
+import { Image as ImageIcon, Trash2 } from 'lucide-react';
+import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import './ProfileScreen.css';
 
+/*
+ * Profile screen — laid out on the 2135 x 1281 artboard measured from
+ * UI References/Profile.png.
+ */
 function formatTime(mins) {
   if (!mins) return '0m';
   if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}h ${m}m`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-function formatDate(iso) {
-  if (!iso) return '--';
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  } catch {
-    return '--';
-  }
-}
-
-export default function ProfileScreen({ screenTime }) {
-  const [avatar, setAvatar] = useState(null);
-  const [name, setName] = useState('ZenTap User');
-  const [memberSince, setMemberSince] = useState(null);
-  const [totalTime, setTotalTime] = useState(0);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    window.electron?.loadConfig?.().then((config) => {
-      if (config.profileAvatar) setAvatar(config.profileAvatar);
-      if (config.profileName) setName(config.profileName);
-      if (config.memberSince) setMemberSince(config.memberSince);
-    });
-    window.electron?.getTotalScreenTime?.().then(setTotalTime);
-  }, []);
-
-  const handleAvatarPick = () => fileInputRef.current?.click();
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      setAvatar(dataUrl);
-      window.electron?.saveConfig?.({ profileAvatar: dataUrl });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleNameBlur = () => {
-    window.electron?.saveConfig?.({ profileName: name });
-  };
-
+export default function ProfileScreen({
+  screenTime = 0,
+  totalTime,
+  name = '{name}',
+  memberSince = '—',
+  avatar,
+  onPickAvatar,
+  onDeleteProfile,
+  onUnpairKey,
+  activeTab,
+  onChangeTab,
+  onBack,
+}) {
   return (
-    <PageShell title="Profile">
-      <div className="profile-screen">
-        <div className="profile-left">
-          <div className="profile-avatar" onClick={handleAvatarPick}>
-            {avatar && <img src={avatar} alt="Avatar" />}
-            <div className="profile-avatar-btn">
-              <ImagePlus size={18} />
-            </div>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleAvatarChange}
-          />
-          <input
-            className="profile-name-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={handleNameBlur}
-          />
-        </div>
+    <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
+      <DImg src="back_button" x={55} y={22} w={79} h={79} />
+      <DHit className="ds-back-hit" x={55} y={22} w={79} h={79} onClick={onBack} aria-label="Back" />
+      <div className="ds-title" style={{ top: 38 }}>Profile</div>
 
-        <div className="profile-right">
-          <div className="profile-time-card">
-            <div className="profile-time-col">
-              <span className="profile-field-label">Today's Time</span>
-              <div className="profile-field-box">{formatTime(screenTime)}</div>
-            </div>
-            <div className="profile-time-divider" />
-            <div className="profile-time-col">
-              <span className="profile-field-label">Total Time</span>
-              <div className="profile-field-box">{formatTime(totalTime)}</div>
-            </div>
-          </div>
-
-          <div className="profile-member-card">
-            <span className="profile-field-label">Member Since</span>
-            <div className="profile-field-box">{formatDate(memberSince)}</div>
-          </div>
-
-          <div className="profile-actions">
-            <button className="profile-action-btn">
-              <span className="profile-action-dot" />
-              Delete Profile
-            </button>
-            <button className="profile-action-btn">
-              <Trash2 size={16} color="#e5484d" />
-              Unpair Zen-Key
-            </button>
-          </div>
-        </div>
+      {/* Avatar */}
+      <div className="pr-avatar" style={{ left: 134, top: 218, width: 632, height: 609 }}>
+        {avatar && <img src={avatar} alt="" draggable={false} />}
       </div>
-    </PageShell>
+      <button
+        type="button"
+        className="pr-avatar-badge"
+        style={{ left: 684, top: 212, width: 101, height: 101 }}
+        onClick={onPickAvatar}
+        aria-label="Change picture"
+      >
+        <ImageIcon size={60} strokeWidth={2} />
+      </button>
+      <div className="pr-name" style={{ left: 124, top: 862, width: 632 }}>{name}</div>
+
+      {/* Time card */}
+      <div className="pr-card" style={{ left: 931, top: 218, width: 1029, height: 340 }} />
+      <div className="pr-pill" style={{ left: 961, top: 254, width: 288, height: 71 }}>Today&rsquo;s Time</div>
+      <div className="pr-value" style={{ left: 967, top: 361, width: 463, height: 149 }}>{formatTime(screenTime)}</div>
+      <div className="pr-vdivider" style={{ left: 1478, top: 254, height: 256 }} />
+      <div className="pr-pill" style={{ left: 1527, top: 254, width: 238, height: 71, paddingLeft: 20 }}>Total Time</div>
+      <div className="pr-value" style={{ left: 1527, top: 361, width: 387, height: 149 }}>
+        {formatTime(totalTime ?? screenTime)}
+      </div>
+
+      {/* Member since */}
+      <div className="pr-card" style={{ left: 931, top: 592, width: 579, height: 257 }} />
+      <div className="pr-pill" style={{ left: 961, top: 623, width: 338, height: 71, paddingLeft: 30 }}>Member Since</div>
+      <div className="pr-value" style={{ left: 961, top: 721, width: 508, height: 103 }}>{memberSince}</div>
+
+      {/* Destructive actions */}
+      <button type="button" className="pr-action" style={{ left: 1552, top: 592, width: 408, height: 114 }} onClick={onDeleteProfile}>
+        <span className="pr-action-dot" />
+        <span className="pr-action-label">Delete Profile</span>
+      </button>
+      <button type="button" className="pr-action" style={{ left: 1552, top: 735, width: 408, height: 114 }} onClick={onUnpairKey}>
+        <span className="pr-action-dot"><Trash2 size={34} strokeWidth={2.2} color="#ff2d2d" /></span>
+        <span className="pr-action-label">Unpair Zen-Key</span>
+      </button>
+    </DesignStage>
   );
 }

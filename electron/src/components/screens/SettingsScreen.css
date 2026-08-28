@@ -1,105 +1,136 @@
-.settings-screen {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.settings-col {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.settings-card {
-  border-radius: 24px;
-  background: var(--zt-pill-bg);
-  padding: 22px 24px;
-  cursor: pointer;
-}
-
-.settings-card-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.settings-card-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.settings-card-desc {
-  font-size: 14px;
-  color: #555;
-  margin: 10px 0 0 0;
-  line-height: 1.4;
-}
-
-.settings-card-group {
-  cursor: default;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 18px;
-  padding: 6px 0;
-  cursor: pointer;
-}
-
-.settings-row-divider {
-  height: 1px;
-  background: #ddd;
-  margin: 12px 0;
-}
-
-.settings-toggle {
-  width: 46px;
-  height: 26px;
-  border-radius: var(--zt-radius-pill);
-  background: #ccc;
-  display: flex;
-  align-items: center;
-  padding: 3px;
-  cursor: pointer;
-}
-
-.settings-toggle.on {
-  background: var(--zt-black);
-  justify-content: flex-end;
-}
-
-.settings-toggle-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.settings-refer-card {
-  position: relative;
-  overflow: hidden;
-  min-height: 130px;
-}
-
-.settings-refer-icon {
+.se-card {
   position: absolute;
-  right: 20px;
-  bottom: 16px;
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-  opacity: 0.9;
+  padding: 0;
+  border: none;
+  border-radius: 48px;
+  background: #f0f0f0;
+  text-align: left;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease;
 }
 
-.settings-footer {
-  text-align: right;
-  font-size: 12px;
-  color: #999;
-  margin-top: 24px;
+.se-card:hover:not(:disabled):not(.static) {
+  background: #e8e8e8;
+}
+
+.se-card:disabled,
+.se-card.static {
+  cursor: default;
+}
+
+.se-heading {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.18);
+  padding-bottom: 10px;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.se-desc {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.23;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.se-chevron-slot {
+  position: absolute;
+}
+
+.se-chevron {
+  display: flex;
+  width: 63px;
+  height: 63px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  align-items: center;
+  justify-content: center;
+}
+
+.se-subrow {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+
+.se-subrow:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.se-subdivider {
+  position: absolute;
+  left: 52px;
+  width: 770px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.se-toggle {
+  position: absolute;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #c9c9c9;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.2s ease;
+}
+
+.se-toggle.on {
+  background: #000000;
+}
+
+.se-knob {
+  width: 47px;
+  height: 47px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.se-toggle.on .se-knob {
+  transform: translateX(88px);
+}
+
+.se-refer-art {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.se-footer {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: #f0f0f0;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 19px;
+  color: #000000;
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
 }

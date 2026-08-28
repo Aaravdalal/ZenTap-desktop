@@ -3,25 +3,30 @@
  * Complete implementation with registry management, proxy server, and cleanup handlers
  */
 
-const { ProxyServer } = require('./proxyServer');
-const { enableProxy, disableProxy, isProxyEnabled, getProxySettings } = require('./registryProxy');
+import { EventEmitter } from 'events';
+import { ProxyServer } from './proxyServer.js';
+import { enableProxy, disableProxy, restoreProxySettings, getProxySettings } from './registryProxy.js';
 
-class WebsiteBlockerProxy {
+class WebsiteBlockerProxy extends EventEmitter {
   constructor(options = {}) {
+    super();
     this.proxyPort = options.port || 8080;
     this.proxyServer = new ProxyServer({
-      port: this.proxyPort,
-      delaySeconds: options.delaySeconds || 5
+      port: this.proxyPort
     });
     this.isActive = false;
     this.originalProxySettings = null;
-    
-    // Setup event handlers
+
+    // Setup event handlers - re-emit on `this` so callers (main.js) can listen
+    // on the blocker instance directly instead of reaching into proxyServer.
     this.proxyServer.on('blocked', (info) => {
       console.log(`[Blocker] Blocked ${info.type}: ${info.hostname}`);
+      this.emit('blocked', info);
     });
-    
+
     this.proxyServer.on('error', (err) => {
+      // Not re-emitted on `this` - Node's EventEmitter throws when an 'error'
+      // event has no listener, and nothing here currently listens for one.
       console.error('[Blocker] Proxy error:', err);
     });
   }
@@ -91,16 +96,12 @@ class WebsiteBlockerProxy {
     
     // Stop proxy server
     await this.proxyServer.stop();
-    
-    // Restore original proxy settings
-    if (this.originalProxySettings && this.originalProxySettings.enabled) {
-      // Re-enable original proxy
-      await enableProxy(this.originalProxySettings.server.split(':')[1] || 8080);
-    } else {
-      // Disable proxy completely
-      await disableProxy();
-    }
-    
+
+    // Restore the user's original proxy settings exactly (server, port and
+    // bypass list) instead of re-enabling a proxy on 127.0.0.1 - that would
+    // silently replace a real upstream proxy the user had configured.
+    await restoreProxySettings(this.originalProxySettings);
+
     this.originalProxySettings = null;
   }
 
@@ -121,6 +122,21 @@ class WebsiteBlockerProxy {
       blockedDomains: Array.from(this.proxyServer.blockedDomains),
       originalSettings: this.originalProxySettings
     };
+  }
+
+  /**
+   * Clear a dangling system proxy left behind by a previous run of this app
+   * that didn't exit cleanly (crash, force-kill, Task Manager) - before-quit
+   * can't run in that case, so the registry is left pointing at 127.0.0.1:port
+   * with nothing listening there, breaking ALL internet access system-wide.
+   * Call this once at app startup, before any real blocking session begins.
+   */
+  async healDanglingProxy() {
+    const current = await getProxySettings();
+    if (current.enabled && current.server === `127.0.0.1:${this.proxyPort}`) {
+      console.warn('[Blocker] Found a dangling proxy from a previous session - disabling it.');
+      await disableProxy();
+    }
   }
 
   /**
@@ -158,7 +174,7 @@ function resetBlockerInstance() {
   blockerInstance = null;
 }
 
-module.exports = {
+export {
   WebsiteBlockerProxy,
   getBlockerInstance,
   resetBlockerInstance

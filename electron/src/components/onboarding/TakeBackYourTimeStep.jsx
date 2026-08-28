@@ -1,28 +1,29 @@
 import OnboardingShell from './OnboardingShell';
 import './TakeBackYourTimeStep.css';
 
-export default function TakeBackYourTimeStep({ step, totalSteps, onBack, onContinue }) {
+/* Measured from UI References/TakeBackYourTime_Onboarding.png. */
+export default function TakeBackYourTimeStep({
+  step,
+  totalSteps,
+  onBack,
+  onContinue,
+  spendYears = 21,
+  saveYears = 14,
+}) {
   return (
-    <OnboardingShell title="Take back your Time" onBack={onBack} step={step} totalSteps={totalSteps}>
-      <div className="tbyt-step">
-        <div className="tbyt-columns">
-          <div className="tbyt-column">
-            <span className="tbyt-label">You will spend:</span>
-            <div className="tbyt-card">
-              <span className="tbyt-number">21</span>
-            </div>
-            <span className="tbyt-caption">years on your phone</span>
-          </div>
-          <div className="tbyt-column">
-            <span className="tbyt-label">ZenKey can help you save:</span>
-            <div className="tbyt-card">
-              <span className="tbyt-number">14</span>
-            </div>
-            <span className="tbyt-caption">years</span>
-          </div>
-        </div>
-        <button className="tbyt-continue" onClick={onContinue}>Continue</button>
-      </div>
+    <OnboardingShell title="Take back your Time" onBack={onBack} progress={(step + 0.5) / totalSteps}>
+      <div className="tb-caption" style={{ left: 222, top: 222, width: 666 }}>You will spend:</div>
+      <div className="tb-card" style={{ left: 222, top: 305, width: 666, height: 533 }}>{spendYears}</div>
+      <div className="tb-legend" style={{ left: 222, top: 866, width: 666 }}>years on your phone</div>
+
+      <div className="tb-caption" style={{ left: 1231, top: 239, width: 666 }}>ZenKey can help you save:</div>
+      <div className="tb-card" style={{ left: 1231, top: 322, width: 666, height: 533 }}>{saveYears}</div>
+      <div className="tb-legend" style={{ left: 1231, top: 884, width: 666 }}>years</div>
+
+      {/* The reference has no Continue control; the flow needs one, so it matches the other steps. */}
+      <button type="button" className="ob-primary" style={{ left: 859, top: 921, width: 409, height: 117 }} onClick={onContinue}>
+        Continue
+      </button>
     </OnboardingShell>
   );
 }

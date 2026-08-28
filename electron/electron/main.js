@@ -13,6 +13,7 @@ import { exec, spawn } from 'child_process';
 import os from 'os';
 import fs from 'fs';
 import { readFile, writeFile } from 'fs/promises';
+import { getBlockerInstance } from './proxy/websiteBlockerProxy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +22,6 @@ let mainWindow;
 let tray = null;
 let isQuitting = false;
 let isDev = process.env.NODE_ENV === 'development';
-let blockedOverlayWindow = null;
 
 // Screen Time State
 let dailyUsageMinutes = 0;
@@ -196,9 +196,15 @@ function createWindow() {
   console.log("createWindow: Creating BrowserWindow instance...");
     if (mainWindow) return;
     mainWindow = new BrowserWindow({
-      width: 1100,
-      height: 850,
+      // Matches the 2135 x 1281 Figma artboard aspect so the design fills the frame.
+      width: 1280,
+      height: 768,
       frame: false,
+    // Transparent so the CSS corner radius becomes the real window shape,
+    // matching the roundedness of the UI inside it.
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -278,11 +284,26 @@ ipcMain.on('maximize-app', () => {
 });
 ipcMain.on('close-app', () => { if (mainWindow) mainWindow.close(); });
 
-app.on('before-quit', () => {
+let quitCleanupDone = false;
+app.on('before-quit', (e) => {
     console.log("Cleaning up child processes before quit...");
     if (blockingProcess) { try { blockingProcess.kill(); } catch (e) {} }
     if (webBlockingProcess) { try { webBlockingProcess.kill(); } catch (e) {} }
     if (usbMonitorProcess) { try { usbMonitorProcess.kill(); } catch (e) {} }
+
+    // Make sure the system proxy is never left pointing at a proxy server
+    // that's about to disappear - otherwise the user loses all internet
+    // access (in every browser) until they manually clear it. Delay the
+    // actual quit until this async cleanup has finished.
+    if (!quitCleanupDone) {
+        e.preventDefault();
+        websiteBlocker.stop()
+            .catch(err => console.error('[WebBlock] Error stopping proxy on quit:', err))
+            .finally(() => {
+                quitCleanupDone = true;
+                app.quit();
+            });
+    }
 });
 
 const CONFIG_FILE = path.join(app.getPath('userData'), 'zentap_config.json');
@@ -351,6 +372,7 @@ function startUsageTracking() {
 app.whenReady().then(async () => {
   console.log("App ready. Starting initialization...");
   try {
+    await websiteBlocker.healDanglingProxy();
     console.log("Calling loadUsage()...");
     await loadUsage();
     console.log("loadUsage() completed. Calling startUsageTracking() [skipped]...");
@@ -397,6 +419,34 @@ let blockingProcess = null;
 let usbMonitorProcess = null;
 let webBlockingProcess = null;
 const recentlyBlocked = new Set();
+const recentlyBlockedWeb = new Set();
+
+// Website blocker (user-level proxy, no admin/extension required) - kept at
+// module scope so it can be stopped both from the renderer and on app quit.
+const websiteBlocker = getBlockerInstance({ port: 8080 });
+websiteBlocker.on('blocked', (info) => {
+  console.log('[WebBlock] blocked event received:', info);
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('website-blocked', info);
+    }
+  } catch (err) {
+    console.error('[WebBlock] Error notifying renderer of block:', err);
+  }
+  // A single page load fires many 'blocked' events in quick succession (the
+  // main request plus every blocked subresource/retry) - without this the
+  // notification overlay window gets torn down and recreated dozens of times
+  // a second, which is what looked like flickering.
+  try {
+    if (!recentlyBlockedWeb.has(info.hostname)) {
+      recentlyBlockedWeb.add(info.hostname);
+      showNotificationOverlay(info.hostname);
+      setTimeout(() => recentlyBlockedWeb.delete(info.hostname), 4000);
+    }
+  } catch (err) {
+    console.error('[WebBlock] Error showing block overlay:', err);
+  }
+});
 
 ipcMain.handle('get-screen-time', async () => {
     return dailyUsageMinutes;
@@ -594,9 +644,6 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
                 if (trimmed.startsWith('DEBUG:')) continue;
                 if (!recentlyBlocked.has(trimmed)) {
                     recentlyBlocked.add(trimmed);
-                    if (mainWindow) {
-                        mainWindow.webContents.send('app-blocked', trimmed);
-                    }
                     showNotificationOverlay(trimmed);
                     setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
                 }
@@ -608,20 +655,8 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
 // --- WEB BLOCKING (Proxy-based) ---
   if (web && web.length > 0) {
     const domains = web.map(w => (w.keyword || w).toString().replace(/'/g, "''")).filter(k => k.length > 0);
-    
-    // Initialize and start proxy-based blocker
-    const { getBlockerInstance } = require('./proxy/websiteBlockerProxy');
-    const blocker = getBlockerInstance({ port: 8080, delaySeconds: 5 });
-    
-    // Listen for blocked events to close tabs and show overlay
-    blocker.on('blocked', (info) => {
-      if (mainWindow) {
-        mainWindow.webContents.send('website-blocked', info);
-        showBlockedOverlay(info.hostname);
-      }
-    });
-    
-    blocker.start(domains).then(success => {
+
+    websiteBlocker.start(domains).then(success => {
       if (success) {
         console.log('[WebBlock] Proxy-based website blocking started successfully');
       } else {
@@ -630,6 +665,9 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
     }).catch(err => {
       console.error('[WebBlock] Error starting proxy:', err);
     });
+  } else {
+    // No sites to block this session - make sure a stale proxy isn't left active.
+    websiteBlocker.stop().catch(err => console.error('[WebBlock] Error stopping proxy:', err));
   }
 });
 
@@ -639,6 +677,7 @@ ipcMain.on('stop-blocking', () => {
   if (blockInterval) { clearInterval(blockInterval); blockInterval = null; }
   if (blockingProcess) { try { blockingProcess.kill(); } catch(e){} blockingProcess = null; }
   if (webBlockingProcess) { try { webBlockingProcess.kill(); } catch(e){} webBlockingProcess = null; }
+  websiteBlocker.stop().catch(err => console.error('[WebBlock] Error stopping proxy:', err));
 });
 
 // --- NOTIFICATION OVERLAY ---
@@ -686,44 +725,6 @@ function showNotificationOverlay(appName) {
       notificationWindow = null;
     }
   }, 4000);
-}
-
-// --- BLOCKED WEBSITE OVERLAY ---
-function showBlockedOverlay(domain) {
-  if (blockedOverlayWindow) {
-    try { blockedOverlayWindow.close(); } catch(e) {}
-  }
-
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.size;
-
-  const overlayPath = path.join(__dirname, 'delay_overlay.html');
-  if (!fs.existsSync(overlayPath)) {
-    console.error(`ERROR: Blocked overlay file missing at: ${overlayPath}`);
-    return;
-  }
-
-  blockedOverlayWindow = new BrowserWindow({
-    x: 0, y: 0, width, height,
-    transparent: true, frame: false,
-    alwaysOnTop: true, skipTaskbar: true,
-    focusable: false, hasShadow: false, resizable: false,
-    webPreferences: { 
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  });
-
-  blockedOverlayWindow.setIgnoreMouseEvents(true);
-  
-  blockedOverlayWindow.loadFile(overlayPath, { query: { domain, delaySeconds: 5 } });
-
-  setTimeout(() => { 
-    if (blockedOverlayWindow) {
-      try { blockedOverlayWindow.close(); } catch(e) {}
-      blockedOverlayWindow = null;
-    }
-  }, 6000);
 }
 
 // --- FULLSCREEN RIPPLE OVERLAY ---
