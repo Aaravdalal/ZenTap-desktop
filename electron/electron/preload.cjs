@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electron', {
   getInstalledApps: () => ipcRenderer.invoke('get-installed-apps'),
   startIconStream: () => ipcRenderer.send('start-icon-stream'),
   onAppIconReady: (callback) => {
+    ipcRenderer.removeAllListeners('app-icon-ready'); // Prevent duplicate listeners
     ipcRenderer.on('app-icon-ready', (event, data) => callback(data));
   },
   startBlocking: (payload) => ipcRenderer.send('start-blocking', payload),
@@ -18,11 +19,15 @@ contextBridge.exposeInMainWorld('electron', {
   showError: (title, body) => ipcRenderer.send('show-error', title, body),
   fetchFavicon: (domain) => ipcRenderer.invoke('fetch-favicon', domain),
   getScreenTime: () => ipcRenderer.invoke('get-screen-time'),
+  getTotalScreenTime: () => ipcRenderer.invoke('get-total-screen-time'),
+  getUsageStats: () => ipcRenderer.invoke('get-usage-stats'),
+  getBlockingState: () => ipcRenderer.invoke('get-blocking-state'),
+  onWindowMaximizeChange: (callback) => {
+    ipcRenderer.removeAllListeners('window-maximize-changed');
+    ipcRenderer.on('window-maximize-changed', (event, isMaximized) => callback(isMaximized));
+  },
   onUsageUpdated: (callback) => {
     ipcRenderer.on('usage-updated', (event, minutes) => callback(minutes));
-  },
-  onAppBlocked: (callback) => {
-    ipcRenderer.on('app-blocked', (event, appName) => callback(appName));
   },
   triggerFullscreenRipple: (coords) => ipcRenderer.send('trigger-fullscreen-ripple', coords),
   startUsbMonitoring: () => ipcRenderer.send('start-usb-monitoring'),

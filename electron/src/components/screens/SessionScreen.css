@@ -1,0 +1,8 @@
+.ds-back-hit {
+  border-radius: 22px;
+  transition: background-color 0.15s ease;
+}
+
+.ds-back-hit:hover {
+  background: rgba(0, 0, 0, 0.05);
+}

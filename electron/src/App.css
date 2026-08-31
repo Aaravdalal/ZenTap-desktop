@@ -4,35 +4,15 @@
   position: relative;
   background-color: white;
   overflow: hidden;
-  border-radius: 40px;
   box-sizing: border-box;
-  border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* New Global Model Layer for Instant Results */
+/* Global 3D device layer: stays mounted, positioned on the design artboard. */
 .global-model-container {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 400px;
   z-index: 5;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
 }
 
+/* Screens swap instantly - no cross-fade on the elements they share. */
 .global-model-container.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.global-model-container.visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-50%);
+  display: none;
 }

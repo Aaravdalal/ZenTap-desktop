@@ -1,0 +1,26 @@
+.ss-start {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: #ffdfdf;
+  color: #000000;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 52px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+  transition: background-color 0.15s ease;
+}
+
+.ss-start:hover {
+  background: #ffd0d0;
+}
+
+.ss-start:active {
+  background: #ffc4c4;
+}

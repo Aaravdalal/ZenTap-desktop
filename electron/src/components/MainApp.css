@@ -1,0 +1,30 @@
+.main-app-window-controls {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 200;
+  display: flex;
+  gap: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.main-app-window-controls .win-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.main-app-window-controls .win-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.main-app-window-controls .win-btn.close:hover {
+  background: #e81123;
+  color: #fff;
+}

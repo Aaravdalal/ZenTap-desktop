@@ -1,0 +1,136 @@
+.se-card {
+  position: absolute;
+  padding: 0;
+  border: none;
+  border-radius: 48px;
+  background: #f0f0f0;
+  text-align: left;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease;
+}
+
+.se-card:hover:not(:disabled):not(.static) {
+  background: #e8e8e8;
+}
+
+.se-card:disabled,
+.se-card.static {
+  cursor: default;
+}
+
+.se-heading {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.18);
+  padding-bottom: 10px;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.se-desc {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.23;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.se-chevron-slot {
+  position: absolute;
+}
+
+.se-chevron {
+  display: flex;
+  width: 63px;
+  height: 63px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  align-items: center;
+  justify-content: center;
+}
+
+.se-subrow {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+
+.se-subrow:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.se-subdivider {
+  position: absolute;
+  left: 52px;
+  width: 770px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.se-toggle {
+  position: absolute;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #c9c9c9;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.2s ease;
+}
+
+.se-toggle.on {
+  background: #000000;
+}
+
+.se-knob {
+  width: 47px;
+  height: 47px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.se-toggle.on .se-knob {
+  transform: translateX(88px);
+}
+
+.se-refer-art {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.se-footer {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: #f0f0f0;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 19px;
+  color: #000000;
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+}

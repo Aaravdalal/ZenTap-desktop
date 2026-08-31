@@ -74,11 +74,7 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
                </svg>
              </div>
            ) : (
-             <img 
-               src="/usb_insert_graphic.png" 
-               alt="Insert USB-C Key" 
-               className="insert-key-image" 
-             />
+             <img className="insert-key-image" src="usb_insert_graphic.png" alt="Insert your Zen Key" draggable={false} />
            )}
         </div>
          

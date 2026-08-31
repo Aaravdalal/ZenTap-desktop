@@ -1,0 +1,86 @@
+.ds-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  -webkit-app-region: drag;
+}
+
+/*
+ * The artboard's grey band has to reach the window edges even when the window
+ * aspect doesn't match the design's, so it is painted on the root behind the
+ * stage. 362.5 = the band's top (1003) measured from the artboard centre.
+ */
+.ds-root::after,
+.ob-root::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: calc(50% + 362.5px * var(--ds-scale, 0.6));
+  background: #d9d9d9;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* A maximized window fills the screen already - dragging it is meaningless. */
+body.is-maximized .ds-root,
+body.is-maximized .ob-root {
+  -webkit-app-region: no-drag;
+}
+
+.ds-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2135px;
+  height: 1281px;
+  transform-origin: center center;
+  z-index: 1;
+}
+
+.ds-el {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ds-hit {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 24px;
+  -webkit-app-region: no-drag;
+}
+
+.ds-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ds-layer-slot {
+  position: absolute;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.ds-title {
+  position: absolute;
+  left: 171px;
+  top: 65px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 50px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}

@@ -1,0 +1,58 @@
+.ht-image {
+  position: absolute;
+  border-radius: 60px;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ht-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  border-radius: 34px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.ht-card-n {
+  width: 176px;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding-left: 22px;
+  border-right: 2px solid rgba(0, 0, 0, 0.12);
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 44px;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ht-card-text {
+  padding: 0 20px 0 24px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.28;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ht-later {
+  position: absolute;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 34px;
+  color: #000000;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ht-later:hover {
+  text-decoration: underline;
+}

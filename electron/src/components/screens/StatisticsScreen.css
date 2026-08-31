@@ -1,0 +1,124 @@
+.st-axis-v,
+.st-axis-h {
+  position: absolute;
+  background: #000000;
+}
+
+.st-axis-v { width: 2px; }
+.st-axis-h { height: 2px; }
+
+.st-bar {
+  position: absolute;
+  background: #d3d3d3;
+  border-radius: 4px 4px 0 0;
+}
+
+.st-avg-line {
+  position: absolute;
+  height: 0;
+  border-top: 3px dashed #000000;
+}
+
+.st-avg-label,
+.st-day {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.st-day { text-align: center; }
+
+.st-panel {
+  position: absolute;
+  border: 2px solid #adadad;
+  border-radius: 48px;
+}
+
+.st-tab {
+  position: absolute;
+  border: none;
+  border-radius: 30px;
+  background: #f0f0f0;
+  color: #000000;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease;
+}
+
+.st-tab:hover { background: #e8e8e8; }
+.st-tab.active { font-weight: 500; }
+
+.st-divider {
+  position: absolute;
+  height: 3px;
+  border-radius: 2px;
+  background: #b9b9b9;
+}
+
+.st-row {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  -webkit-app-region: no-drag;
+}
+
+.st-row:disabled { cursor: default; }
+
+.st-row-icon {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: 30px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.st-row-icon img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+.st-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.st-row-name {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-font-smoothing: antialiased;
+}
+
+.st-row-time {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  color: #adadad;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+}

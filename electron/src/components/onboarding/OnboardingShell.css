@@ -1,0 +1,112 @@
+.ob-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  -webkit-app-region: drag;
+}
+
+/* The welcome step's grey band starts higher (845 on the artboard). */
+.ob-root.hero::after {
+  top: calc(50% + 204.5px * var(--ds-scale, 0.6));
+}
+
+.ob-track {
+  position: absolute;
+  border-radius: 999px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.ob-track-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #f0f0f0;
+  transition: width 0.3s ease;
+}
+
+.ob-hero {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ob-primary,
+.ob-secondary {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 46px;
+  line-height: 1;
+  color: #ffffff;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transition: filter 0.15s ease;
+}
+
+.ob-primary {
+  background: #007aff;
+}
+
+.ob-secondary {
+  background: #000000;
+}
+
+.ob-primary:hover,
+.ob-secondary:hover {
+  filter: brightness(1.12);
+}
+
+.ob-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+  filter: none;
+}
+
+.ob-terms {
+  position: absolute;
+  text-align: center;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ob-terms u {
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.ob-option {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid transparent;
+  border-radius: 34px;
+  background: #f0f0f0;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 47px;
+  line-height: 1;
+  color: #000000;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ob-option:hover {
+  background: #e8e8e8;
+}
+
+.ob-option.selected {
+  border-color: #000000;
+  background: #ffffff;
+}

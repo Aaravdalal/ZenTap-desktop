@@ -1,0 +1,24 @@
+.ms-art {
+  position: absolute;
+  border-radius: 40px;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ms-sign {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ms-para {
+  position: absolute;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 46px;
+  line-height: 1.3;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}

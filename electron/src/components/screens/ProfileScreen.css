@@ -1,0 +1,126 @@
+.pr-avatar {
+  position: absolute;
+  border-radius: 60px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.pr-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pr-avatar-badge {
+  position: absolute;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease;
+}
+
+.pr-avatar-badge:hover {
+  background: #f2f2f2;
+}
+
+.pr-name {
+  position: absolute;
+  text-align: center;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 49px;
+  line-height: 1;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.pr-card {
+  position: absolute;
+  border-radius: 48px;
+  background: #f0f0f0;
+}
+
+.pr-pill {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding-left: 13px;
+  border-radius: 22px;
+  background: #ffffff;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 39px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.pr-value {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding-left: 26px;
+  border-radius: 30px;
+  background: #ffffff;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 44px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pr-vdivider {
+  position: absolute;
+  width: 3px;
+  background: #b8b8b8;
+}
+
+.pr-action {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 0 20px;
+  border: none;
+  border-radius: 57px;
+  background: #f0f0f0;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease;
+}
+
+.pr-action:hover {
+  background: #e8e8e8;
+}
+
+.pr-action-dot {
+  width: 71px;
+  height: 71px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-action-label {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+}

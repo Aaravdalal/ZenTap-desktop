@@ -1,0 +1,59 @@
+.page-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.page-shell-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 36px 8px 36px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.page-back-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 14px;
+  background: var(--zt-card-bg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.page-back-btn:hover:not(:disabled) {
+  background: var(--zt-pill-bg);
+}
+
+.page-back-btn.invisible {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.page-shell-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000;
+  margin: 0;
+  flex: 1;
+}
+
+.page-shell-header-extra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 36px 32px 36px;
+}

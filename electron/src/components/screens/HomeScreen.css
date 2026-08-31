@@ -1,0 +1,95 @@
+/* All values are artboard units (2135 x 1281); the stage scales them. */
+.hs-title {
+  position: absolute;
+  left: 136px;
+  top: 82px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 50px;
+  line-height: 1;
+  color: #000000;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.hs-stat {
+  position: absolute;
+  left: 818px;
+  width: 284px;
+  height: 212px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #000000;
+  border-radius: 46px;
+  background: #ffffff;
+}
+
+.hs-stat-pad {
+  position: absolute;
+  left: 32px;
+  top: 65px;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hs-stat-text {
+  position: absolute;
+  left: 140px;
+  top: 46px;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  line-height: 1;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.hs-stat-label {
+  font-weight: 500;
+  font-size: 31px;
+  color: #adadad;
+}
+
+.hs-stat-value {
+  margin-top: 26px;
+  font-weight: 700;
+  font-size: 53px;
+  color: #000000;
+}
+
+.hs-device-btn {
+  position: absolute;
+  left: 80px;
+  top: 812px;
+  width: 619px;
+  height: 124px;
+  border: none;
+  border-radius: 63px;
+  background: #000000;
+  color: #ffffff;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1;
+  padding-top: 6px;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+  /* Background only: a hover `filter` re-rasterises the label and reads as bold. */
+  transition: background-color 0.15s ease;
+}
+
+.hs-device-btn:hover {
+  background: #1f1f1f;
+}
+
+.hs-device-btn:active {
+  background: #333333;
+}

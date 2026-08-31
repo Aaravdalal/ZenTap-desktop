@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import './ManageAppsPopup.css';
 
-export default function ManageAppsPopup({ onClose, selectedApps, setSelectedApps, selectedWebsites, setSelectedWebsites }) {
-  const [activeTab, setActiveTab] = useState('apps'); // 'apps' or 'websites'
+export default function ManageAppsPopup({ onClose, initialTab = 'apps', selectedApps, setSelectedApps, selectedWebsites, setSelectedWebsites }) {
+  // Opening from a dock's + lands you on that dock's list.
+  const [activeTab, setActiveTab] = useState(initialTab); // 'apps' or 'websites'
   
   const [allApps, setAllApps] = useState([]);
   const [search, setSearch] = useState('');
@@ -130,7 +131,7 @@ export default function ManageAppsPopup({ onClose, selectedApps, setSelectedApps
                         filteredApps.map(app => (
                            <div key={app.path} className="app-row" onClick={() => toggleApp(app)}>
                               <div className="app-icon">
-                                 {app.icon ? <img src={app.icon} alt="" onError={(e) => e.target.src = '/missing_icon.png'} /> : <img src="/missing_icon.png" alt="" />}
+                                 {app.icon ? <img src={app.icon} alt="" onError={(e) => e.target.src = 'missing_icon.png'} /> : <img src="missing_icon.png" alt="" />}
                               </div>
                               <span className={`app-name ${app.checked ? 'bold' : ''}`}>{app.name}</span>
                               <div className={`app-checkbox ${app.checked ? 'checked' : ''}`}>
@@ -163,7 +164,7 @@ export default function ManageAppsPopup({ onClose, selectedApps, setSelectedApps
                      ) : (
                         selectedWebsites.map(web => (
                            <div key={web.keyword} className="web-row">
-                              {web.icon ? <img src={web.icon} className="web-icon" alt="" onError={(e) => e.target.src = '/missing_icon.png'} /> : <img src="/missing_icon.png" className="web-icon" alt="" />}
+                              {web.icon ? <img src={web.icon} className="web-icon" alt="" onError={(e) => e.target.src = 'missing_icon.png'} /> : <img src="missing_icon.png" className="web-icon" alt="" />}
                               <span className="web-keyword">{web.keyword}</span>
                               <span className="web-remove" onClick={() => removeWebsite(web.keyword)}>✕</span>
                            </div>

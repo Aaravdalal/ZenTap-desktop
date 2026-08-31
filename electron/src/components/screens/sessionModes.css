@@ -1,0 +1,80 @@
+.ds-mode-card {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 46px;
+  -webkit-app-region: no-drag;
+  transition: filter 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+button.ds-mode-card:hover {
+  filter: brightness(1.06);
+}
+
+button.ds-mode-card:active {
+  transform: scale(0.995);
+}
+
+/* Which of the two the session is about to run - the reference has no state
+   for this, so it borrows the design's pink outline. */
+.ds-mode-card.selected {
+  outline: 6px solid #ff8f96;
+  outline-offset: 12px;
+}
+
+.ds-mode-card.muted {
+  opacity: 0.5;
+}
+
+.ds-mode-bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ds-mode-el {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Zen Mode's timer, in place of the card's description. */
+.ds-mode-timer {
+  position: absolute;
+  left: 48px;
+  top: 218px;
+  display: flex;
+  gap: 24px;
+}
+
+.ds-mode-timer button {
+  width: 170px;
+  height: 92px;
+  border: 3px solid rgba(255, 255, 255, 0.55);
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease;
+}
+
+.ds-mode-timer button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.ds-mode-timer button.on {
+  background: #ffffff;
+  color: #6b5f60;
+}
