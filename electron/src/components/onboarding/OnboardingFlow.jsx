@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import WelcomeStep from './WelcomeStep';
 import ScreentimeStep from './ScreentimeStep';
+import { hoursForBracket } from './screentime';
 import TakeBackYourTimeStep from './TakeBackYourTimeStep';
 import HowToUseStep from './HowToUseStep';
 import MessageStep from './MessageStep';
@@ -39,7 +40,13 @@ export default function OnboardingFlow({ onComplete }) {
       );
     case 2:
       return (
-        <TakeBackYourTimeStep step={2} totalSteps={TOTAL_STEPS} onBack={back} onContinue={next} />
+        <TakeBackYourTimeStep
+          step={2}
+          totalSteps={TOTAL_STEPS}
+          onBack={back}
+          onContinue={next}
+          hoursPerDay={hoursForBracket(screentimeBracket)}
+        />
       );
     case 3:
       return (

@@ -9,7 +9,7 @@ import './StatisticsScreen.css';
  * Everything here is real: `usage` comes from the main process, which samples
  * the foreground window and keeps per-day totals for each app and site.
  */
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BAR_X = [144, 247, 350, 453, 555, 659, 763];
 const BAR_W = 77;
 const AXIS_X = 104;
@@ -18,6 +18,9 @@ const CHART_TOP = 262;
 
 const ROW_Y = [345, 493, 641, 789];
 const COL_X = [1134, 1496];
+// The columns are 362 apart, so a row has to stay narrower than that or a long
+// name runs straight into the next column instead of being trimmed.
+const ROW_W = 344;
 
 export default function StatisticsScreen({
   usage,
@@ -29,6 +32,17 @@ export default function StatisticsScreen({
   onBack,
 }) {
   const data = usage?.weekly?.length === 7 ? usage.weekly : [0, 0, 0, 0, 0, 0, 0];
+
+  /*
+   * The chart is the last seven days ending today, so the labels come from the
+   * dates themselves rather than a fixed Monday-first week. Today is "Today".
+   */
+  const labels = (usage?.days?.length === 7 ? usage.days : []).map((key, i) => {
+    if (i === 6) return 'Today';
+    const [y, m, d] = key.split('-').map(Number);
+    return WEEKDAYS[new Date(y, m - 1, d).getDay()];
+  });
+  const dayLabels = labels.length === 7 ? labels : ['', '', '', '', '', '', 'Today'];
   const peak = Math.max(...data, 1);
   const avg = data.reduce((a, b) => a + b, 0) / data.length;
   const usable = AXIS_Y - CHART_TOP - 10;
@@ -47,12 +61,12 @@ export default function StatisticsScreen({
       <div className="st-axis-v" style={{ left: AXIS_X, top: CHART_TOP, height: AXIS_Y - CHART_TOP + 2 }} />
       <div className="st-axis-h" style={{ left: AXIS_X, top: AXIS_Y, width: 866 - AXIS_X }} />
       {data.map((v, i) => (
-        <div key={DAYS[i]} className="st-bar" style={{ left: BAR_X[i], width: BAR_W, top: AXIS_Y - 1 - barH(v), height: barH(v) }} />
+        <div key={i} className="st-bar" style={{ left: BAR_X[i], width: BAR_W, top: AXIS_Y - 1 - barH(v), height: barH(v) }} />
       ))}
       <div className="st-avg-line" style={{ left: AXIS_X, top: avgY, width: 866 - AXIS_X }} />
       <div className="st-avg-label" style={{ left: 62, top: avgY - 10 }}>Avg</div>
-      {DAYS.map((d, i) => (
-        <div key={d} className="st-day" style={{ left: BAR_X[i], width: BAR_W, top: 954 }}>{d}</div>
+      {dayLabels.map((d, i) => (
+        <div key={i} className={`st-day ${i === 6 ? 'today' : ''}`} style={{ left: BAR_X[i], width: BAR_W, top: 954 }}>{d}</div>
       ))}
 
       {/* Breakdown panel */}
@@ -84,7 +98,7 @@ export default function StatisticsScreen({
             key={i}
             type="button"
             className="st-row"
-            style={{ left: x, top: y, width: 490, height: 120 }}
+            style={{ left: x, top: y, width: ROW_W, height: 120 }}
             onClick={() => item && onSelectItem?.(item)}
             disabled={!item}
           >

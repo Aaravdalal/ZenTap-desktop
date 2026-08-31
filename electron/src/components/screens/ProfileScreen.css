@@ -31,14 +31,33 @@
 
 .pr-name {
   position: absolute;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
   text-align: center;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 700;
   font-size: 49px;
   line-height: 1;
   color: #000000;
+  -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
-  transform: translateZ(0);
+  transition: background-color 0.15s ease;
+}
+
+.pr-name::placeholder {
+  color: #b9b9b9;
+  font-weight: 700;
+}
+
+.pr-name:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.pr-name:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .pr-card {
@@ -89,6 +108,7 @@
 
 .pr-action {
   position: absolute;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -116,11 +136,16 @@
 }
 
 .pr-action-label {
+  min-width: 0;
+  flex: 1;
+  padding-right: 22px;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 400;
-  font-size: 40px;
+  font-size: 36px;
   line-height: 1;
   color: #000000;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   -webkit-font-smoothing: antialiased;
 }

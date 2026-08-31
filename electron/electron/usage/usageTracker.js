@@ -19,7 +19,8 @@ import { spawn } from 'child_process';
 
 const TICK_SECONDS = 5;
 const IDLE_LIMIT_SECONDS = 60;
-const KEEP_DAYS = 30;
+// Only the window the statistics screens show is kept on disk.
+const KEEP_DAYS = 7;
 
 const BROWSERS = new Set(['chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi', 'arc', 'zen']);
 
@@ -67,14 +68,13 @@ function dayKey(date = new Date()) {
   return `${y}-${m}-${d}`;
 }
 
-/** Monday-first list of the seven day keys in the week containing `date`. */
+/** The last seven days, oldest first, ending with today. */
 export function weekKeys(date = new Date()) {
-  const monday = new Date(date);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const end = new Date(date);
+  end.setHours(0, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(end);
+    d.setDate(end.getDate() - (6 - i));
     return dayKey(d);
   });
 }
@@ -149,7 +149,7 @@ class UsageTracker {
   today() {
     const key = dayKey();
     if (!this.data.days[key]) {
-      this.data.days[key] = { apps: {}, sites: {}, blocks: {}, blocked: {}, total: 0 };
+      this.data.days[key] = { apps: {}, sites: {}, blocks: {}, blocked: {}, total: 0, sessions: 0 };
       this.prune();
     }
     const day = this.data.days[key];
@@ -159,6 +159,7 @@ class UsageTracker {
     day.blocks ??= {};
     day.blocked ??= {};
     day.total ??= 0;
+    day.sessions ??= 0;
     return day;
   }
 
@@ -220,6 +221,8 @@ class UsageTracker {
     if (proc) {
       day.apps[proc] = (day.apps[proc] || 0) + TICK_SECONDS;
       day.total += TICK_SECONDS;
+      // Days are pruned after a week; this one keeps counting.
+      this.data.lifetimeSeconds = (this.data.lifetimeSeconds || 0) + TICK_SECONDS;
     }
 
     if (proc && BROWSERS.has(proc) && title) {
@@ -273,6 +276,34 @@ class UsageTracker {
     this.onChange?.();
   }
 
+  /** A focus session was started today. */
+  recordSessionStart() {
+    const day = this.today();
+    day.sessions = (day.sessions || 0) + 1;
+    this.save();
+    this.onChange?.();
+  }
+
+  /** Consecutive days up to today on which at least one session ran. */
+  streak() {
+    let count = 0;
+    const cursor = new Date();
+    for (let i = 0; i < KEEP_DAYS; i += 1) {
+      const day = this.data.days[dayKey(cursor)];
+      if (day?.sessions > 0) count += 1;
+      // Today not having a session yet doesn't break a streak that is alive.
+      else if (i > 0) break;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }
+
+  /** Active seconds since ZenTap was installed, not just the kept week. */
+  totalSeconds() {
+    const kept = Object.values(this.data.days).reduce((sum, d) => sum + (d.total || 0), 0);
+    return Math.max(this.data.lifetimeSeconds || 0, kept);
+  }
+
   /** One "you were stopped from opening this" event. */
   recordBlockEvent(key) {
     if (!key) return;
@@ -298,31 +329,44 @@ class UsageTracker {
   summary({ apps = [], sites = [] } = {}) {
     const keys = weekKeys();
     const days = keys.map((k) => this.dayFor(k));
+    const todayIndex = keys.length - 1;
 
     const series = (bucket, key) => days.map((d) => d[bucket]?.[key] || 0);
     const sum = (arr) => arr.reduce((a, b) => a + b, 0);
 
+    /*
+     * Tracking runs whether or not a session does, so a blocked item already
+     * has a history by the time it is blocked. The tray lists only what the
+     * user chose to block; the chart above it covers everything.
+     */
     const build = (entries, bucket) =>
-      entries.map(({ key, name, icon }) => {
-        const daily = series(bucket, key);
-        const blockedDaily = series('blocked', key);
-        return {
-          key,
-          name,
-          icon,
-          daily,
-          seconds: daily[(new Date().getDay() + 6) % 7],
-          weekSeconds: sum(daily),
-          blockedSeconds: series('blocked', key)[(new Date().getDay() + 6) % 7],
-          blockedWeekSeconds: sum(blockedDaily),
-          blockEvents: sum(series('blocks', key)),
-        };
-      });
+      entries
+        .map(({ key, name, icon, blocked = true }) => {
+          const daily = series(bucket, key);
+          const blockedDaily = series('blocked', key);
+          return {
+            key,
+            name,
+            icon,
+            blocked,
+            daily,
+            seconds: daily[todayIndex],
+            weekSeconds: sum(daily),
+            blockedSeconds: blockedDaily[todayIndex],
+            blockedWeekSeconds: sum(blockedDaily),
+            blockEvents: sum(series('blocks', key)),
+          };
+        })
+        // Most-used first.
+        .sort((a, b) => b.weekSeconds - a.weekSeconds);
 
     return {
       days: keys,
       weekly: days.map((d) => Math.round((d.total || 0) / 60)),
-      todayTotal: days[(new Date().getDay() + 6) % 7]?.total || 0,
+      todayTotal: days[todayIndex]?.total || 0,
+      todaySessions: days[todayIndex]?.sessions || 0,
+      streak: this.streak(),
+      totalSeconds: this.totalSeconds(),
       apps: build(apps, 'apps'),
       sites: build(sites, 'sites'),
       siteAccuracy: getSiteAccuracyNote(),

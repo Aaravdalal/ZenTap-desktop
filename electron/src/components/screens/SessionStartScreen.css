@@ -5,8 +5,8 @@
   justify-content: center;
   border: none;
   border-radius: 999px;
-  background: #ffdfdf;
-  color: #000000;
+  background: #4a4a4a;
+  color: #ffffff;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 400;
   font-size: 52px;
@@ -18,9 +18,9 @@
 }
 
 .ss-start:hover {
-  background: #ffd0d0;
+  background: #565656;
 }
 
 .ss-start:active {
-  background: #ffc4c4;
+  background: #3c3c3c;
 }

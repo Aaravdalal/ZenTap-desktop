@@ -27,8 +27,9 @@
   line-height: 1;
   color: #000000;
   white-space: nowrap;
+  /* Its own line under the text rather than a rule through the descenders. */
   border-bottom: 2px solid rgba(0, 0, 0, 0.18);
-  padding-bottom: 10px;
+  padding-bottom: 22px;
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
 }
@@ -117,6 +118,10 @@
   height: 100%;
   pointer-events: none;
   user-select: none;
+  /* The crop has a hard left edge; fade it so the photo grows out of the card
+     instead of starting at a seam. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 38%);
+  mask-image: linear-gradient(to right, transparent 0, #000 38%);
 }
 
 .se-footer {

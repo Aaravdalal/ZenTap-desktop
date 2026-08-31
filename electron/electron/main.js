@@ -16,6 +16,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { getBlockerInstance } from './proxy/websiteBlockerProxy.js';
 import { usageTracker, processKey } from './usage/usageTracker.js';
 import { extensionBridge } from './extension/bridge.js';
+import { extractHighResIcons } from './icons/extractIcons.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -549,6 +550,39 @@ ipcMain.handle('get-total-screen-time', async () => {
 // The renderer's copy of "is a session running" is lost on reload/restart;
 // without this it can show "Zen Device" while a session is still blocking and
 // leave no way to stop it.
+/**
+ * Links live in links.md next to the app so they can be changed without
+ * touching code. Format: "- key: url", one per line; anything else is ignored.
+ */
+function readLinks() {
+    const candidates = [
+        path.join(__dirname, '..', 'links.md'),
+        path.join(app.getAppPath(), 'links.md'),
+        path.join(process.resourcesPath || '', 'links.md'),
+    ];
+    const links = {};
+    for (const file of candidates) {
+        if (!file || !fs.existsSync(file)) continue;
+        try {
+            for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+                const match = /^\s*[-*]\s*([A-Za-z][\w-]*)\s*:\s*(.*)$/.exec(line);
+                // A blank value falls back to the built-in default.
+                if (match && match[2].trim()) links[match[1]] = match[2].trim();
+            }
+            return links;
+        } catch (err) {
+            console.error('[Links] Could not read', file, err);
+        }
+    }
+    return links;
+}
+
+ipcMain.handle('get-links', async () => readLinks());
+
+ipcMain.on('open-external', (e, url) => {
+    if (typeof url === 'string' && /^(https?|mailto):/i.test(url)) shell.openExternal(url);
+});
+
 ipcMain.handle('get-blocking-state', async () => ({
     blocking: isBlocking,
     endsAt: sessionEndsAt,
@@ -559,16 +593,27 @@ ipcMain.handle('get-blocking-state', async () => ({
 
 ipcMain.handle('get-usage-stats', async () => {
     const config = readConfig();
-    const apps = (config.selectedApps || []).map(a => ({
-        key: resolveExeName(a),
-        name: a.name,
-        icon: a.icon || null,
-    }));
+
+    // Names and icons come from the live app list rather than whatever the
+    // config saved, which may predate the icon ever being resolved.
+    const byKey = new Map();
+    for (const cached of cachedAppList) {
+        const key = resolveExeName(cached);
+        if (key && !byKey.has(key)) byKey.set(key, cached);
+    }
+
+    const apps = (config.selectedApps || []).map(a => {
+        const key = resolveExeName(a);
+        const cached = byKey.get(key);
+        return { key, name: a.name || cached?.name || key, icon: cached?.icon || a.icon || null };
+    });
+
     const sites = (config.selectedWebsites || []).map(w => ({
         key: w.keyword || w,
         name: w.keyword || w,
         icon: w.icon || null,
     }));
+
     return usageTracker.summary({ apps, sites });
 });
 
@@ -619,6 +664,32 @@ ipcMain.on('start-icon-stream', async (event) => {
         } catch (e) { console.error('LNK resolve error', e); }
     }
 
+    /*
+     * Work out which file each app's icon actually lives in, then ask the
+     * shell for 256px versions in one batch. app.getFileIcon() only goes up to
+     * 48px, which is soft everywhere these icons are shown.
+     */
+    const resolveIconPath = (appItem) => {
+        let iconPath = appItem.path;
+        if (iconPath.includes('}\\')) {
+            const parts = iconPath.split('}\\');
+            const guid = (parts[0] + '}').toUpperCase();
+            iconPath = GUID_MAP[guid] ? path.join(GUID_MAP[guid], parts[1]) : parts[1];
+        }
+        if (iconPath && iconPath.toLowerCase().endsWith('.lnk')) {
+            const target = resolvedTargets[iconPath.toLowerCase()];
+            if (target) iconPath = target;
+        }
+        return iconPath;
+    };
+
+    const highRes = await extractHighResIcons(
+        cachedAppList
+            .filter(a => !a.icon || a.icon === missingIconBase64)
+            .map(resolveIconPath)
+            .filter(p => p && p.includes('\\'))
+    );
+
     // Process icons in background and push to UI
     const iconless = [];
     for (const appItem of cachedAppList) {
@@ -658,16 +729,19 @@ ipcMain.on('start-icon-stream', async (event) => {
                 }
             }
 
+            // The shell's 256px version, when it had one.
+            if (!icon && iconPath) icon = highRes[iconPath.toLowerCase()] || null;
+
             // Extract Icon
-            if (iconPath && (iconPath.includes('\\') || iconPath.endsWith('.exe'))) {
-                const iconImg = await app.getFileIcon(iconPath, { size: 'normal' }).catch(() => null);
+            if (!icon && iconPath && (iconPath.includes('\\') || iconPath.endsWith('.exe'))) {
+                const iconImg = await app.getFileIcon(iconPath, { size: 'large' }).catch(() => null);
                 if (iconImg && !iconImg.isEmpty()) icon = iconImg.toDataURL();
             }
 
             // The shortcut itself carries the app's icon, and it still works
             // when the target is missing (store stubs, MSI advertised links).
             if (!icon && appItem.path.toLowerCase().endsWith('.lnk') && iconPath !== appItem.path) {
-                const lnkImg = await app.getFileIcon(appItem.path, { size: 'normal' }).catch(() => null);
+                const lnkImg = await app.getFileIcon(appItem.path, { size: 'large' }).catch(() => null);
                 if (lnkImg && !lnkImg.isEmpty()) icon = lnkImg.toDataURL();
             }
 
@@ -731,7 +805,12 @@ ipcMain.on('start-icon-stream', async (event) => {
                 for (const candidate of candidates) {
                     const exePath = appPathsCache[candidate];
                     if (!exePath || !fs.existsSync(exePath)) continue;
-                    const regImg = await app.getFileIcon(exePath, { size: 'normal' }).catch(() => null);
+                    if (highRes[exePath.toLowerCase()]) {
+                        icon = highRes[exePath.toLowerCase()];
+                        if (!appItem.exeName) appItem.exeName = path.basename(exePath);
+                        break;
+                    }
+                    const regImg = await app.getFileIcon(exePath, { size: 'large' }).catch(() => null);
                     if (regImg && !regImg.isEmpty()) {
                         icon = regImg.toDataURL();
                         if (!appItem.exeName) appItem.exeName = path.basename(exePath);
@@ -765,7 +844,7 @@ ipcMain.on('start-icon-stream', async (event) => {
 
 ipcMain.handle('fetch-favicon', async (event, domain) => {
     try {
-        const response = await fetch(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+        const response = await fetch(`https://www.google.com/s2/favicons?domain=${domain}&sz=256`);
         const buffer = await response.arrayBuffer();
         return `data:image/png;base64,${Buffer.from(buffer).toString('base64')}`;
     } catch (e) {
@@ -805,6 +884,8 @@ ipcMain.on('start-blocking', (e, { apps, web, endsAt }) => {
 
   // Everything on the list is unreachable for as long as the session runs.
   usageTracker.setWatchedSites(web);
+  usageTracker.recordSessionStart();
+  if (readConfig().blockNotifications) setNotificationsMuted(true);
   usageTracker.setBlocking(true, [
     ...appNames,
     ...(web || []).map(w => (w.keyword || w).toString()),
@@ -836,10 +917,10 @@ ipcMain.on('start-blocking', (e, { apps, web, endsAt }) => {
   // and safer than the system proxy, which strands every browser on this
   // machine if ZenTap dies without cleaning up - so when an extension has
   // checked in recently, the proxy is left alone entirely.
-  if (web && web.length > 0 && extensionBridge.isConnected()) {
-    console.log('[WebBlock] Extension connected (' + extensionBridge.connectedBrowsers().join(', ') + ') - blocking in the browser, system proxy not touched.');
-    websiteBlocker.stop().catch(err => console.error('[WebBlock] Error stopping proxy:', err));
-  } else if (web && web.length > 0) {
+  if (extensionBridge.isConnected()) {
+    console.log('[WebBlock] Extension also connected:', extensionBridge.connectedBrowsers().join(', '));
+  }
+  if (web && web.length > 0) {
     const domains = web.map(w => (w.keyword || w).toString().replace(/'/g, "''")).filter(k => k.length > 0);
 
     websiteBlocker.start(domains).then(success => {
@@ -861,6 +942,7 @@ ipcMain.on('stop-blocking', () => {
   isBlocking = false;
   sessionEndsAt = null;
   usageTracker.setBlocking(false);
+  if (readConfig().blockNotifications) setNotificationsMuted(false);
   recentlyBlocked.clear();
   if (blockInterval) { clearInterval(blockInterval); blockInterval = null; }
   if (blockingProcess) { try { blockingProcess.kill(); } catch(e){} blockingProcess = null; }
@@ -954,6 +1036,27 @@ ipcMain.on('trigger-fullscreen-ripple', (e, { screenX, screenY }) => {
     }
   }, 2000);
 });
+
+/**
+ * Windows' global "show notifications" switch. A session mutes it when the
+ * Block Notifications preference is on, and always restores it afterwards.
+ */
+function setNotificationsMuted(muted) {
+   const val = muted ? 0 : 1;
+   const toasts = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings';
+   const shellToasts = 'HKCU:\\Software\\Microsoft\\Windows\\Shell\\Notifications\\AppSettings\\Microsoft.Explorer.Notification';
+   // One line, over stdin: PowerShell reading `-Command -` runs a multi-line
+   // block a line at a time, and cmd.exe mangles the quotes on the way in.
+   const script = "$ErrorActionPreference='SilentlyContinue'; "
+      + `if (-not (Test-Path '${toasts}')) { New-Item '${toasts}' -Force | Out-Null }; `
+      + `Set-ItemProperty -Path '${toasts}' -Name 'NOC_GLOBAL_SETTING_TOASTS_ENABLED' -Value ${val} -Type DWord; `
+      + `if (Test-Path '${shellToasts}') { Set-ItemProperty -Path '${shellToasts}' -Name 'Enabled' -Value ${val} -Type DWord }\n`;
+   const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', '-'], { windowsHide: true });
+   child.on('error', (err) => console.error('[Notifications] Failed:', err));
+   child.stdin.write(script);
+   child.stdin.end();
+   console.log('[Notifications]', muted ? 'muted for this session' : 'restored');
+}
 
 ipcMain.on('toggle-notifications', (e, muted) => {
    const val = muted ? 0 : 1;

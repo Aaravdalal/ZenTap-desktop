@@ -3,7 +3,7 @@ import './HowToUseStep.css';
 
 /* Measured from UI References/HowToUse_Onboarding.png. */
 const STEPS = [
-  { n: 1, y: 230, text: 'Click \u201c Zen Device \u201d and insert your ZenKey.' },
+  { n: 1, y: 230, text: 'Click \u201cZen Device\u201d and insert your ZenKey.' },
   {
     n: 2,
     y: 442,

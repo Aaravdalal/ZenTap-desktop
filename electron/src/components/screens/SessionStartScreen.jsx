@@ -2,6 +2,7 @@ import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import DesignBlockDock from '../shared/DesignBlockDock';
 import { APPS_DOCK, WEBSITES_DOCK } from '../shared/dockGeometry';
 import ModeCard from './ModeCard';
+import DurationPicker from './DurationPicker';
 import { MODES } from './sessionModes';
 import './SessionStartScreen.css';
 
@@ -12,15 +13,14 @@ import './SessionStartScreen.css';
  * of the flow except back or start.
  */
 const START = { x: 326, y: 1142, w: 1483, h: 111 };
-const DURATIONS = [15, 30, 60, 90];
 
 export default function SessionStartScreen({
   mode,
   selectedApps,
   selectedWebsites,
   onOpenDock,
-  minutes,
-  onChangeMinutes,
+  seconds,
+  onChangeSeconds,
   onStart,
   onBack,
 }) {
@@ -36,19 +36,7 @@ export default function SessionStartScreen({
           {m.id === 'zen' && m.id === mode && (
             /* Zen Mode locks the machine until the timer runs out, so the
                length has to be chosen before the session starts. */
-            <div className="ds-mode-timer">
-              {DURATIONS.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={d === minutes ? 'on' : ''}
-                  onClick={() => onChangeMinutes?.(d)}
-                  aria-pressed={d === minutes}
-                >
-                  {d} min
-                </button>
-              ))}
-            </div>
+            <DurationPicker seconds={seconds} onChange={onChangeSeconds} />
           )}
         </ModeCard>
       ))}

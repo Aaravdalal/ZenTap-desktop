@@ -2,12 +2,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, Environment, ContactShadows, Center, PresentationControls } from '@react-three/drei';
 
-/*
- * Relative on purpose: a packaged build is served from file://, where a leading
- * slash resolves to the drive root and the model fails to load - which used to
- * throw straight through Suspense and blank the whole app.
- */
-export const MODEL_URL = 'USBC_key_v2.glb';
+import { MODEL_URL } from './shared/modelUrl';
 import * as THREE from 'three';
 
 function Model({ url, rotation, scale }) {

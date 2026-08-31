@@ -27,12 +27,20 @@ export default function HomeScreen({
   selectedWebsites,
   onOpenDock,
   screenTime,
+  sessions = 0,
+  streak = 0,
   isBlocking,
   onStartZen,
   activeTab,
   onChangeTab,
 }) {
-  const values = { sessions: '0', time: formatTime(screenTime), streak: '1' };
+  // `screenTime` is time at the computer, from the foreground probe - not time
+  // spent in ZenTap itself.
+  const values = {
+    sessions: String(sessions),
+    time: formatTime(screenTime),
+    streak: String(streak),
+  };
 
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>

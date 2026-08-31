@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { DImg, DHit } from '../shared/DesignStage';
-import { useStageScale } from '../shared/designArtboard';
+import { asset, useStageScale } from '../shared/designArtboard';
+import '../shared/DesignNav.css';
 import './OnboardingShell.css';
 
 /*
@@ -10,9 +12,39 @@ import './OnboardingShell.css';
 const TRACK = { x: 162, y: 1185, w: 1811, h: 35 };
 const MARKER = { y: 1141, w: 64, h: 52 };
 
+/*
+ * How far along the marker was left. Each step renders its own shell, so this
+ * component is remounted on every step - without remembering the previous
+ * position the marker would appear at its destination instead of travelling.
+ */
+let parkedProgress = null;
+
 export default function OnboardingShell({ title, onBack, progress, hero = false, children }) {
   const scale = useStageScale();
-  const markerX = TRACK.x + TRACK.w * (progress ?? 0) - MARKER.w / 2;
+  const markerFor = (p) => TRACK.x + TRACK.w * (p ?? 0) - MARKER.w / 2;
+
+  // Start where the previous step left the marker, then move on the next frame
+  // so there is something for the transition to animate from.
+  const [shown, setShown] = useState(() => parkedProgress ?? progress ?? 0);
+  const [moving, setMoving] = useState(false);
+
+  useEffect(() => {
+    if (progress == null) return undefined;
+    const arrived = parkedProgress === progress && shown === progress;
+    parkedProgress = progress;
+    if (arrived) return undefined;
+    let second;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => {
+        setShown(progress);
+        setMoving(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [progress, shown]);
 
   return (
     <div className={`ob-root ${hero ? 'hero' : ''}`}>
@@ -38,9 +70,20 @@ export default function OnboardingShell({ title, onBack, progress, hero = false,
         {progress != null && (
           <>
             <div className="ob-track" style={{ left: TRACK.x, top: TRACK.y, width: TRACK.w, height: TRACK.h }}>
-              <div className="ob-track-fill" style={{ width: `${progress * 100}%` }} />
+              <div className="ob-track-fill" style={{ width: `${shown * 100}%` }} />
             </div>
-            <DImg src="nav_indicator" x={markerX} y={MARKER.y} w={MARKER.w} h={MARKER.h} />
+            <div
+              className="ds-nav-indicator"
+              style={{ left: markerFor(shown), top: MARKER.y, width: MARKER.w, height: MARKER.h }}
+            >
+              <img
+                key={moving ? progress : 'parked'}
+                className={moving ? 'settling' : ''}
+                src={asset('nav_indicator')}
+                alt=""
+                draggable={false}
+              />
+            </div>
           </>
         )}
       </div>

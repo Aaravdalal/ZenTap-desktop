@@ -5,7 +5,7 @@ import './App.css'
 
 // Preload the 3D model as soon as this module loads
 import { useGLTF } from '@react-three/drei'
-import { MODEL_URL } from './components/InteractiveCard'
+import { MODEL_URL } from './components/shared/modelUrl'
 useGLTF.preload(MODEL_URL)
 
 function App() {

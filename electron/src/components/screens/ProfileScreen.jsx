@@ -15,7 +15,8 @@ function formatTime(mins) {
 export default function ProfileScreen({
   screenTime = 0,
   totalTime,
-  name = '{name}',
+  name = '',
+  onChangeName,
   memberSince = '—',
   avatar,
   onPickAvatar,
@@ -44,7 +45,17 @@ export default function ProfileScreen({
       >
         <ImageIcon size={60} strokeWidth={2} />
       </button>
-      <div className="pr-name" style={{ left: 124, top: 862, width: 632 }}>{name}</div>
+      {/* Type straight over it; empty shows the placeholder in grey. */}
+      <input
+        className="pr-name"
+        style={{ left: 124, top: 862, width: 632 }}
+        value={name}
+        placeholder="ZenTap User"
+        maxLength={28}
+        spellCheck={false}
+        onChange={(e) => onChangeName?.(e.target.value)}
+        aria-label="Your name"
+      />
 
       {/* Time card */}
       <div className="pr-card" style={{ left: 931, top: 218, width: 1029, height: 340 }} />

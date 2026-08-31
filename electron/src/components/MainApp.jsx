@@ -24,13 +24,16 @@ export default function MainApp() {
   const [selectedApps, setSelectedApps] = useState([]);
   const [selectedWebsites, setSelectedWebsites] = useState([]);
   const [isBlocking, setIsBlocking] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [memberSince, setMemberSince] = useState('');
+  const [blockNotifications, setBlockNotifications] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
   const [usage, setUsage] = useState(null);
 
   // Session flow: pick a mode on the Session tab, confirm it on the start
   // screen, and only then does anything get blocked.
   const [pendingMode, setPendingMode] = useState(null);
-  const [zenMinutes, setZenMinutes] = useState(30);
+  const [zenSeconds, setZenSeconds] = useState(30 * 60);
   const [sessionEndsAt, setSessionEndsAt] = useState(null);
 
   const isInitialMount = useRef(true);
@@ -50,6 +53,9 @@ export default function MainApp() {
     window.electron?.loadConfig?.().then(config => {
       if (config.selectedApps) setSelectedApps(config.selectedApps);
       if (config.selectedWebsites) setSelectedWebsites(config.selectedWebsites);
+      if (config.profileName) setProfileName(config.profileName);
+      if (config.memberSince) setMemberSince(config.memberSince);
+      setBlockNotifications(!!config.blockNotifications);
     });
   }, []);
 
@@ -104,6 +110,17 @@ export default function MainApp() {
     return () => clearInterval(id);
   }, [activeTab, refreshUsage, selectedApps, selectedWebsites]);
 
+  const saveProfileName = (value) => {
+    setProfileName(value);
+    window.electron?.saveConfig?.({ profileName: value });
+  };
+
+  const toggleBlockNotifications = (value) => {
+    setBlockNotifications(value);
+    // Main reads this when a session starts, and puts Windows back afterwards.
+    window.electron?.saveConfig?.({ blockNotifications: value });
+  };
+
   const stopSession = useCallback(() => {
     window.electron?.stopBlocking();
     setIsBlocking(false);
@@ -135,8 +152,11 @@ export default function MainApp() {
       return;
     }
     if (sessionEndsAt && Date.now() < sessionEndsAt) {
-      const left = Math.ceil((sessionEndsAt - Date.now()) / 60000);
-      window.electron?.showError('Zen Mode', `This session is locked for another ${left} minute${left === 1 ? '' : 's'}.`);
+      const remaining = Math.ceil((sessionEndsAt - Date.now()) / 1000);
+      const left = remaining >= 60
+        ? `${Math.ceil(remaining / 60)} minute${Math.ceil(remaining / 60) === 1 ? '' : 's'}`
+        : `${remaining} second${remaining === 1 ? '' : 's'}`;
+      window.electron?.showError('Zen Mode', `This session is locked for another ${left}.`);
       return;
     }
     stopSession();
@@ -147,7 +167,7 @@ export default function MainApp() {
       window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
       return;
     }
-    const endsAt = pendingMode === 'zen' ? Date.now() + zenMinutes * 60000 : null;
+    const endsAt = pendingMode === 'zen' ? Date.now() + zenSeconds * 1000 : null;
     window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites, endsAt });
     setIsBlocking(true);
     setSessionEndsAt(endsAt);
@@ -188,6 +208,8 @@ export default function MainApp() {
         <HomeScreen
           {...dockProps}
           screenTime={screenTime}
+          sessions={usage?.todaySessions ?? 0}
+          streak={usage?.streak ?? 0}
           isBlocking={isBlocking}
           onStartZen={startZenFlow}
           activeTab={activeTab}
@@ -207,8 +229,8 @@ export default function MainApp() {
         <SessionStartScreen
           {...dockProps}
           mode={pendingMode}
-          minutes={zenMinutes}
-          onChangeMinutes={setZenMinutes}
+          seconds={zenSeconds}
+          onChangeSeconds={setZenSeconds}
           onStart={startSession}
           onBack={() => setPendingMode(null)}
         />
@@ -218,6 +240,7 @@ export default function MainApp() {
         detailedStatsItem ? (
           <DetailedStatisticsScreen
             item={detailedStatsItem}
+            days={usage?.days}
             activeTab={activeTab}
             onChangeTab={changeTab}
             onBack={() => setDetailedStatsItem(null)}
@@ -238,6 +261,8 @@ export default function MainApp() {
         <SettingsScreen
           isBlocking={isBlocking}
           onEmergencyUnblock={stopSession}
+          blockNotifications={blockNotifications}
+          onToggleNotifications={toggleBlockNotifications}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}
@@ -246,6 +271,10 @@ export default function MainApp() {
       {activeTab === 'profile' && (
         <ProfileScreen
           screenTime={screenTime}
+          totalTime={usage ? Math.round(usage.totalSeconds / 60) : screenTime}
+          name={profileName}
+          onChangeName={saveProfileName}
+          memberSince={memberSince ? new Date(memberSince).toLocaleDateString() : '—'}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}

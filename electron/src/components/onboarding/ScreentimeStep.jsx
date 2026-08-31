@@ -1,20 +1,12 @@
 import OnboardingShell from './OnboardingShell';
+import { OPTIONS } from './screentime';
 import './ScreentimeStep.css';
 
 /* Measured from UI References/Screentime_Onboarding.png. */
-const OPTIONS = [
-  { id: '0-2', label: '0-2 Hours', x: 456, y: 277 },
-  { id: '6-8', label: '6-8 Hours', x: 1171, y: 277 },
-  { id: '2-4', label: '2-4 Hours', x: 456, y: 492 },
-  { id: '8-10', label: '8-10 Hours', x: 1171, y: 492 },
-  { id: '4-6', label: '4-6 Hours', x: 456, y: 707 },
-  { id: '10+', label: '10 > Hours', x: 1171, y: 707 },
-];
-
 export default function ScreentimeStep({ step, totalSteps, onBack, onContinue, value, onChange }) {
   return (
     <OnboardingShell
-      title="How Much Time Do You Spend on Your Screen Everyday?"
+      title="How Much Time Do You Spend on Your Screen Every Day?"
       onBack={onBack}
       progress={(step + 0.5) / totalSteps}
     >

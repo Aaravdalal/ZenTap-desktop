@@ -22,3 +22,12 @@
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
 }
+
+.ms-social-hit {
+  border-radius: 12px;
+  transition: background-color 0.15s ease;
+}
+
+.ms-social-hit:hover {
+  background: rgba(0, 0, 0, 0.06);
+}

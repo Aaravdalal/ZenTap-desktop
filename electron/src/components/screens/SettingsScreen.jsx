@@ -1,21 +1,13 @@
 import { ChevronRight } from 'lucide-react';
 import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import { asset } from '../shared/designArtboard';
+import { useLinks, openLink } from '../shared/useLinks';
 import './SettingsScreen.css';
 
 /*
  * Settings screen — laid out on the 2135 x 1281 artboard measured from
  * UI References/Settings.png.
  */
-const LINKS = {
-  privacy: 'https://zentap.app/privacy',
-  why: 'https://zentap.app/why',
-  contact: 'mailto:hello@zentap.app',
-  troubleshooting: 'https://zentap.app/troubleshooting',
-  faq: 'https://zentap.app/faq',
-  refer: 'https://zentap.app',
-};
-
 const Chevron = () => (
   <span className="se-chevron"><ChevronRight size={32} strokeWidth={2.4} /></span>
 );
@@ -29,10 +21,9 @@ export default function SettingsScreen({
   onChangeTab,
   onBack,
 }) {
-  const open = (url) => {
-    if (window.electron?.openExternal) window.electron.openExternal(url);
-    else window.open(url, '_blank');
-  };
+  // Every URL here is editable in electron/links.md.
+  const links = useLinks();
+  const open = openLink;
 
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
@@ -49,7 +40,7 @@ export default function SettingsScreen({
       >
         <span className="se-heading" style={{ left: 35, top: 37 }}>Emergency Unblock</span>
         <span className="se-desc" style={{ left: 28, top: 116, width: 845 }}>
-          Interrupts focus sessions unlocking all apps and websites. Use sparingly!
+          Interrupts focus sessions, unlocking all apps and websites. Use sparingly!
         </span>
         <span className="se-chevron-slot" style={{ left: 782, top: 31 }}><Chevron /></span>
       </button>
@@ -57,7 +48,7 @@ export default function SettingsScreen({
       <div className="se-card static" style={{ left: 133, top: 464, width: 874, height: 217 }}>
         <span className="se-heading" style={{ left: 25, top: 24 }}>Block Notifications</span>
         <span className="se-desc" style={{ left: 27, top: 118, width: 845 }}>
-          If this is toggled all notification will be blocked, and will appear below.
+          If this is toggled, all notifications are blocked while a session runs.
         </span>
         <button
           type="button"
@@ -71,12 +62,12 @@ export default function SettingsScreen({
       </div>
 
       <div className="se-card static" style={{ left: 133, top: 722, width: 874, height: 217 }}>
-        <button type="button" className="se-subrow" style={{ top: 0, height: 106 }} onClick={() => open(LINKS.privacy)}>
+        <button type="button" className="se-subrow" style={{ top: 0, height: 106 }} onClick={() => open(links.privacy)}>
           <span className="se-heading" style={{ left: 46, top: 24 }}>Privacy Policy</span>
           <span className="se-chevron-slot" style={{ left: 787, top: 18 }}><Chevron /></span>
         </button>
         <div className="se-subdivider" style={{ top: 106 }} />
-        <button type="button" className="se-subrow" style={{ top: 107, height: 110 }} onClick={() => open(LINKS.why)}>
+        <button type="button" className="se-subrow" style={{ top: 107, height: 110 }} onClick={() => open(links.why)}>
           <span className="se-heading" style={{ left: 43, top: 24 }}>Why ZenTap?</span>
           <span className="se-chevron-slot" style={{ left: 787, top: 31 }}><Chevron /></span>
         </button>
@@ -86,7 +77,7 @@ export default function SettingsScreen({
         type="button"
         className="se-card"
         style={{ left: 1140, top: 205, width: 874, height: 217 }}
-        onClick={() => open(LINKS.contact)}
+        onClick={() => open(links.contact)}
       >
         <span className="se-heading" style={{ left: 32, top: 36 }}>Contact Us</span>
         <span className="se-desc" style={{ left: 33, top: 111, width: 845 }}>
@@ -99,18 +90,18 @@ export default function SettingsScreen({
         type="button"
         className="se-card refer"
         style={{ left: 1140, top: 464, width: 874, height: 217 }}
-        onClick={() => open(LINKS.refer)}
+        onClick={() => open(links.refer)}
       >
         <img className="se-refer-art" src={asset('refer_art')} alt="" draggable={false} />
         <span className="se-heading" style={{ left: 31, top: 30 }}>Refer Us</span>
-        <span className="se-desc" style={{ left: 26, top: 107, width: 300 }}>Share ZenTap with friends!</span>
+        <span className="se-desc" style={{ left: 26, top: 107, width: 290 }}>Share ZenTap with friends!</span>
       </button>
 
       <button
         type="button"
         className="se-card"
         style={{ left: 1140, top: 722, width: 874, height: 95 }}
-        onClick={() => open(LINKS.troubleshooting)}
+        onClick={() => open(links.troubleshooting)}
       >
         <span className="se-heading" style={{ left: 26, top: 15 }}>Troubleshooting</span>
         <span className="se-chevron-slot" style={{ left: 788, top: 16 }}><Chevron /></span>
@@ -120,7 +111,7 @@ export default function SettingsScreen({
         type="button"
         className="se-card"
         style={{ left: 1140, top: 844, width: 874, height: 95 }}
-        onClick={() => open(LINKS.faq)}
+        onClick={() => open(links.faq)}
       >
         <span className="se-heading" style={{ left: 40, top: 16 }}>FAQ</span>
         <span className="se-chevron-slot" style={{ left: 788, top: 16 }}><Chevron /></span>

@@ -33,6 +33,8 @@
 
 .st-day { text-align: center; }
 
+.st-day.today { font-weight: 700; }
+
 .st-panel {
   position: absolute;
   border: 2px solid #adadad;
@@ -72,6 +74,7 @@
   border: none;
   background: transparent;
   text-align: left;
+  overflow: hidden;
   -webkit-app-region: no-drag;
 }
 
@@ -101,9 +104,12 @@
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .st-row-name {
+  max-width: 100%;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 400;
   font-size: 30px;

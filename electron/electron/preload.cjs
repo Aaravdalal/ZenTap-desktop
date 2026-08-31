@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('electron', {
   getTotalScreenTime: () => ipcRenderer.invoke('get-total-screen-time'),
   getUsageStats: () => ipcRenderer.invoke('get-usage-stats'),
   getBlockingState: () => ipcRenderer.invoke('get-blocking-state'),
+  getLinks: () => ipcRenderer.invoke('get-links'),
+  openExternal: (url) => ipcRenderer.send('open-external', url),
   onWindowMaximizeChange: (callback) => {
     ipcRenderer.removeAllListeners('window-maximize-changed');
     ipcRenderer.on('window-maximize-changed', (event, isMaximized) => callback(isMaximized));

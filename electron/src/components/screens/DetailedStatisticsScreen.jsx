@@ -7,13 +7,18 @@ import './DetailedStatisticsScreen.css';
  * UI References/Detailed_Statistics_Example_app.png. The item carries the
  * figures the main process measured for it.
  */
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const GRAPH = { x: 1032, y: 671, w: 724, h: 246 };
 
-export default function DetailedStatisticsScreen({ item, activeTab, onChangeTab, onBack }) {
+export default function DetailedStatisticsScreen({ item, days, activeTab, onChangeTab, onBack }) {
   const name = item?.name || 'Item';
   const daily = item?.daily?.length === 7 ? item.daily : [0, 0, 0, 0, 0, 0, 0];
   const peak = Math.max(...daily, 1);
+  // Same seven days as the main chart: oldest on the left, today on the right.
+  const labels = (days?.length === 7 ? days : []).map((key) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return WEEKDAYS[new Date(y, m - 1, d).getDay()];
+  });
 
   const cells = [
     { key: 'timeBlocked', label: 'Time Blocked', x: 1032, y: 251, value: formatDuration(item?.blockedSeconds) },
@@ -49,7 +54,7 @@ export default function DetailedStatisticsScreen({ item, activeTab, onChangeTab,
         {daily.map((v, i) => (
           <div key={i} className="dst-graph-col">
             <div className="dst-graph-bar" style={{ height: `${Math.max(3, (v / peak) * 100)}%` }} />
-            <div className="dst-graph-day">{DAYS[i]}</div>
+            <div className="dst-graph-day">{labels[i] ?? ''}</div>
           </div>
         ))}
       </div>

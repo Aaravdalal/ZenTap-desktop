@@ -1,13 +1,11 @@
 import OnboardingShell from './OnboardingShell';
 import { asset } from '../shared/designArtboard';
+import { useLinks, openLink } from '../shared/useLinks';
 import './WelcomeStep.css';
 
 /* Measured from UI References/Welcome.png (2135 x 1281 artboard). */
 export default function WelcomeStep({ onContinue, onNoKey }) {
-  const open = (url) => {
-    if (window.electron?.openExternal) window.electron.openExternal(url);
-    else window.open(url, '_blank');
-  };
+  const links = useLinks();
 
   return (
     <OnboardingShell hero>
@@ -27,8 +25,8 @@ export default function WelcomeStep({ onContinue, onNoKey }) {
       </button>
 
       <div className="ob-terms" style={{ left: 326, top: 1215, width: 1483 }}>
-        By continuing, you agree to our <u onClick={() => open('https://zentap.app/terms')}>Terms</u> and{' '}
-        <u onClick={() => open('https://zentap.app/privacy')}>Privacy Policy</u>
+        By continuing, you agree to our <u onClick={() => openLink(links.terms)}>Terms</u> and{' '}
+        <u onClick={() => openLink(links.privacyPolicy)}>Privacy Policy</u>
       </div>
     </OnboardingShell>
   );
