@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { DImg, DHit } from '../shared/DesignStage';
 import { useStageScale } from '../shared/designArtboard';
 import './OnboardingShell.css';
@@ -12,12 +11,11 @@ const TRACK = { x: 162, y: 1185, w: 1811, h: 35 };
 const MARKER = { y: 1141, w: 64, h: 52 };
 
 export default function OnboardingShell({ title, onBack, progress, hero = false, children }) {
-  const rootRef = useRef(null);
-  const scale = useStageScale(rootRef);
+  const scale = useStageScale();
   const markerX = TRACK.x + TRACK.w * (progress ?? 0) - MARKER.w / 2;
 
   return (
-    <div className="ob-root" ref={rootRef}>
+    <div className={`ob-root ${hero ? 'hero' : ''}`}>
       <div
         className="ds-stage"
         style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}

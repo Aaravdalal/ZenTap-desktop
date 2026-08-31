@@ -9,29 +9,48 @@ import { useEffect, useState } from 'react';
 export const DESIGN_W = 2135;
 export const DESIGN_H = 1281;
 
-/** Resolve a name from the Figma export shipped in public/ui. */
-export const asset = (name) => `/ui/${name}.png`;
+/*
+ * Resolve a name from the Figma export shipped in public/ui. The path is
+ * relative because a packaged build is served from file://, where a leading
+ * slash points at the drive root and every image comes up broken.
+ */
+export const asset = (name) => `ui/${name}.png`;
 
-/** Scale that fits the artboard inside the element `ref` points at. */
-export function useStageScale(ref) {
-  const [scale, setScale] = useState(0);
+/*
+ * Every stage fills the window, so the scale can be derived from the window
+ * itself rather than measured from the element. That matters: measuring meant
+ * the first frame of every screen had no scale yet and was rendered hidden,
+ * which showed up as a flicker on each tab change.
+ */
+function computeScale() {
+  if (typeof window === 'undefined') return 0;
+  const { innerWidth: w, innerHeight: h } = window;
+  if (!w || !h) return 0;
+  return Math.min(w / DESIGN_W, h / DESIGN_H);
+}
+
+function publishScale(scale) {
+  // Lets CSS outside the stage (the grey bleed) line up with the artboard.
+  document.documentElement.style.setProperty('--ds-scale', String(scale));
+}
+
+if (typeof document !== 'undefined') publishScale(computeScale());
+
+/** Scale that fits the artboard inside the window, known on the first render. */
+export function useStageScale() {
+  const [scale, setScale] = useState(computeScale);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
     const update = () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (!width || !height) return;
-      const next = Math.min(width / DESIGN_W, height / DESIGN_H);
+      const next = computeScale();
+      if (!next) return;
       setScale(next);
-      // Lets the window frame round itself to the same radius as the design.
-      document.documentElement.style.setProperty('--ds-scale', String(next));
+      publishScale(next);
     };
     update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref]);
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   return scale;
 }

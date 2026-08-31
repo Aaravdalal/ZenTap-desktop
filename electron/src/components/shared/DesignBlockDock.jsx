@@ -11,7 +11,7 @@ const SLOT = 84;
  */
 export default function DesignBlockDock({
   title, titlePos, frame, slots, rows, cols,
-  count, countBox, countDy = 0, plusBox, items, onOpen, label,
+  count, countBox, countDy = 0, plusBox, items, onOpen, label, tab,
 }) {
   return (
     <>
@@ -37,7 +37,7 @@ export default function DesignBlockDock({
         y={plusBox.y}
         w={plusBox.w}
         h={plusBox.h}
-        onClick={onOpen}
+        onClick={() => onOpen?.(tab)}
         aria-label={`Add to ${label}`}
       />
 
@@ -53,11 +53,11 @@ export default function DesignBlockDock({
             {item && (
               <img
                 className="ds-el ds-slot-icon"
-                src={item.icon || '/missing_icon.png'}
+                src={item.icon || 'missing_icon.png'}
                 alt={item.name || item.keyword || ''}
                 draggable={false}
                 style={{ left: x + 11, top: y + 11, width: SLOT - 22, height: SLOT - 22 }}
-                onError={(e) => { e.target.src = '/missing_icon.png'; }}
+                onError={(e) => { e.target.src = 'missing_icon.png'; }}
               />
             )}
           </div>
@@ -70,7 +70,7 @@ export default function DesignBlockDock({
         y={frame.y}
         w={frame.w}
         h={frame.h}
-        onClick={onOpen}
+        onClick={() => onOpen?.(tab)}
         aria-label={label}
       />
     </>

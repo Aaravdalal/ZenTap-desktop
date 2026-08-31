@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { DImg, DHit } from './DesignStage';
+import { asset } from './designArtboard';
 import './DesignNav.css';
 
 /* Artboard coordinates measured from UI References/Session_Select.png. */
@@ -44,8 +46,48 @@ const TABS = [
   },
 ];
 
+/*
+ * Which tab the marker was last parked on. It lives outside the component on
+ * purpose: each screen renders its own nav, so switching tabs unmounts this
+ * component and mounts a new one. Without remembering the previous tab the new
+ * marker simply appears at its destination - the "teleport" - because a CSS
+ * transition has no previous value to animate from.
+ */
+let parkedTab = null;
+
+const markerX = (tabId) => {
+  const tab = TABS.find((t) => t.id === tabId);
+  return tab ? tab.pill.x + INDICATOR.offset : null;
+};
+
 export default function DesignNav({ activeTab, onChange }) {
   const active = TABS.find((t) => t.id === activeTab);
+
+  // Render at the old tab's position, then move to the new one on the next
+  // frame so the browser has something to animate from.
+  const [x, setX] = useState(() => markerX(parkedTab) ?? markerX(activeTab));
+  const [moving, setMoving] = useState(false);
+
+  useEffect(() => {
+    const target = markerX(activeTab);
+    if (target == null) return undefined;
+    const arrived = parkedTab === activeTab && x === target;
+    parkedTab = activeTab;
+    if (arrived) return undefined;
+
+    // Two frames: one to paint the start position, one to change it.
+    let second;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => {
+        setX(target);
+        setMoving(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [activeTab, x]);
 
   return (
     <>
@@ -69,13 +111,20 @@ export default function DesignNav({ activeTab, onChange }) {
       ))}
       {/* The marker sits on top of its pill, as in the Figma render. */}
       {active && (
-        <DImg
-          src="nav_indicator"
-          x={active.pill.x + INDICATOR.offset}
-          y={INDICATOR.y}
-          w={INDICATOR.w}
-          h={INDICATOR.h}
-        />
+        <div
+          className="ds-nav-indicator"
+          style={{ left: x, top: INDICATOR.y, width: INDICATOR.w, height: INDICATOR.h }}
+        >
+          {/* Keyed on the tab so the settle restarts on each move, and only
+              once it is actually moving - no wobble on first paint. */}
+          <img
+            key={moving ? activeTab : 'parked'}
+            className={moving ? 'settling' : ''}
+            src={asset('nav_indicator')}
+            alt=""
+            draggable={false}
+          />
+        </div>
       )}
     </>
   );

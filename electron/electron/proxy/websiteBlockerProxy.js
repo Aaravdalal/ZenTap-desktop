@@ -6,6 +6,7 @@
 import { EventEmitter } from 'events';
 import { ProxyServer } from './proxyServer.js';
 import { enableProxy, disableProxy, restoreProxySettings, getProxySettings } from './registryProxy.js';
+import { startProxyGuardian, stopProxyGuardian } from './proxyGuardian.js';
 
 class WebsiteBlockerProxy extends EventEmitter {
   constructor(options = {}) {
@@ -60,6 +61,9 @@ class WebsiteBlockerProxy extends EventEmitter {
       }
 
       this.isActive = true;
+      // From here until cleanup, a crash would strand every browser on this
+      // machine, so leave something behind that can undo it.
+      startProxyGuardian();
       console.log('[Blocker] Website blocking started successfully');
       return true;
     } catch (error) {
@@ -93,6 +97,7 @@ class WebsiteBlockerProxy extends EventEmitter {
    */
   async cleanup() {
     this.isActive = false;
+    stopProxyGuardian();
     
     // Stop proxy server
     await this.proxyServer.stop();
@@ -145,6 +150,7 @@ class WebsiteBlockerProxy extends EventEmitter {
   async forceCleanup() {
     console.log('[Blocker] Force cleanup triggered');
     try {
+      stopProxyGuardian();
       await this.proxyServer.stop();
       await disableProxy();
     } catch (error) {

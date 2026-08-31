@@ -108,13 +108,6 @@
   object-fit: contain;
 }
 
-/* Live 3D Zen-Key: drag to rotate. */
-.insert-key-model {
-  width: 340px;
-  height: 220px;
-  -webkit-app-region: no-drag;
-}
-
 .insert-key-cancel {
   width: 100%;
   max-width: 400px;

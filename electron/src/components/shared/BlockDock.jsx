@@ -20,9 +20,9 @@ export default function BlockDock({ label, items, onOpen, slots = 10 }) {
             <div key={i} className="block-dock-slot">
               {item && (
                 <img
-                  src={item.icon || '/missing_icon.png'}
+                  src={item.icon || 'missing_icon.png'}
                   alt={item.name || item.keyword || ''}
-                  onError={(e) => { e.target.src = '/missing_icon.png'; }}
+                  onError={(e) => { e.target.src = 'missing_icon.png'; }}
                 />
               )}
             </div>

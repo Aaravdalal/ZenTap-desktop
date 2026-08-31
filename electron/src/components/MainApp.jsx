@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import RippleCanvas from './RippleCanvas';
 import InteractiveCard from './InteractiveCard';
 import { ArtboardLayer } from './shared/DesignStage';
+import SafeBoundary from './shared/SafeBoundary';
 import HomeScreen from './screens/HomeScreen';
 import SessionScreen from './screens/SessionScreen';
+import SessionStartScreen from './screens/SessionStartScreen';
 import StatisticsScreen from './screens/StatisticsScreen';
 import DetailedStatisticsScreen from './screens/DetailedStatisticsScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -18,12 +20,31 @@ export default function MainApp() {
   const [statsTab, setStatsTab] = useState('apps');
 
   const [showPopup, setShowPopup] = useState(false);
+  const [popupTab, setPopupTab] = useState('apps');
   const [selectedApps, setSelectedApps] = useState([]);
   const [selectedWebsites, setSelectedWebsites] = useState([]);
   const [isBlocking, setIsBlocking] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
+  const [usage, setUsage] = useState(null);
+
+  // Session flow: pick a mode on the Session tab, confirm it on the start
+  // screen, and only then does anything get blocked.
+  const [pendingMode, setPendingMode] = useState(null);
+  const [zenMinutes, setZenMinutes] = useState(30);
+  const [sessionEndsAt, setSessionEndsAt] = useState(null);
 
   const isInitialMount = useRef(true);
+
+  // A session outlives this window: after a reload or restart the renderer has
+  // to ask who is actually blocking, or it shows "Zen Device" with no way to
+  // stop a session that is still running.
+  useEffect(() => {
+    window.electron?.getBlockingState?.().then((state) => {
+      if (!state?.blocking) return;
+      setIsBlocking(true);
+      setSessionEndsAt(state.endsAt || null);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     window.electron?.loadConfig?.().then(config => {
@@ -56,6 +77,13 @@ export default function MainApp() {
     }
   }, [showInsertKey]);
 
+  // Resolve app icons in the background at launch. They are cached in the main
+  // process, so the app drawer opens with them already in place instead of
+  // filling in over the next few seconds.
+  useEffect(() => {
+    window.electron?.startIconStream?.();
+  }, []);
+
   useEffect(() => {
     window.electron?.getScreenTime().then(setScreenTime);
     window.electron?.onUsageUpdated((minutes) => setScreenTime(minutes));
@@ -64,25 +92,67 @@ export default function MainApp() {
     });
   }, []);
 
-  const handleKeyInserted = () => {
+  // Real per-app / per-site usage, refreshed while the statistics tab is open.
+  const refreshUsage = useCallback(() => {
+    window.electron?.getUsageStats?.().then(setUsage).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshUsage();
+    if (activeTab !== 'statistics') return;
+    const id = setInterval(refreshUsage, 15000);
+    return () => clearInterval(id);
+  }, [activeTab, refreshUsage, selectedApps, selectedWebsites]);
+
+  const stopSession = useCallback(() => {
+    window.electron?.stopBlocking();
+    setIsBlocking(false);
+    setSessionEndsAt(null);
+  }, []);
+
+  // A Zen Mode session runs to the end of its timer, then releases itself.
+  useEffect(() => {
+    if (!isBlocking || !sessionEndsAt) return;
+    const id = setInterval(() => {
+      if (Date.now() >= sessionEndsAt) stopSession();
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isBlocking, sessionEndsAt, stopSession]);
+
+  const handleKeyVerified = () => {
     setShowInsertKey(false);
     window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: 0.5, y: 0.5 } }));
-    window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites });
-    setIsBlocking(true);
+    // The key only unlocks the flow; the session itself is set up next.
+    setPendingMode(null);
+    setDetailedStatsItem(null);
+    setActiveTab('session');
   };
 
   const startZenFlow = () => {
     if (!isBlocking) {
-      if (selectedApps.length === 0 && selectedWebsites.length === 0) {
-        window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
-        return;
-      }
       setIsUsbInserted(false);
       setShowInsertKey(true);
-    } else {
-      window.electron?.stopBlocking();
-      setIsBlocking(false);
+      return;
     }
+    if (sessionEndsAt && Date.now() < sessionEndsAt) {
+      const left = Math.ceil((sessionEndsAt - Date.now()) / 60000);
+      window.electron?.showError('Zen Mode', `This session is locked for another ${left} minute${left === 1 ? '' : 's'}.`);
+      return;
+    }
+    stopSession();
+  };
+
+  const startSession = () => {
+    if (selectedApps.length === 0 && selectedWebsites.length === 0) {
+      window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
+      return;
+    }
+    const endsAt = pendingMode === 'zen' ? Date.now() + zenMinutes * 60000 : null;
+    window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites, endsAt });
+    setIsBlocking(true);
+    setSessionEndsAt(endsAt);
+    setPendingMode(null);
+    setActiveTab('home');
   };
 
   const changeTab = (tab) => {
@@ -90,7 +160,13 @@ export default function MainApp() {
     setDetailedStatsItem(null);
   };
 
-  const dockProps = { selectedApps, selectedWebsites, onOpenDock: () => setShowPopup(true) };
+  const openDock = (tab = 'apps') => {
+    setPopupTab(tab === 'websites' ? 'websites' : 'apps');
+    setShowPopup(true);
+  };
+
+  const dockProps = { selectedApps, selectedWebsites, onOpenDock: openDock };
+  const inSessionSetup = activeTab === 'session' && pendingMode;
 
   return (
     <>
@@ -100,9 +176,11 @@ export default function MainApp() {
         className={`global-model-container ${activeTab === 'home' ? 'visible' : 'hidden'}`}
         x={118} y={380} w={940} h={420}
       >
-        <Suspense fallback={null}>
-          <InteractiveCard scale={2.338} />
-        </Suspense>
+        <SafeBoundary label="Zen device model">
+          <Suspense fallback={null}>
+            <InteractiveCard scale={2.338} />
+          </Suspense>
+        </SafeBoundary>
       </ArtboardLayer>
 
       {/* Rebuilt 1:1 from the Figma export — these draw their own chrome and nav. */}
@@ -116,14 +194,23 @@ export default function MainApp() {
           onChangeTab={changeTab}
         />
       )}
-      {activeTab === 'session' && (
+      {activeTab === 'session' && !pendingMode && (
         <SessionScreen
           {...dockProps}
-          isBlocking={isBlocking}
-          onStartZen={startZenFlow}
+          onSelectMode={setPendingMode}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}
+        />
+      )}
+      {inSessionSetup && (
+        <SessionStartScreen
+          {...dockProps}
+          mode={pendingMode}
+          minutes={zenMinutes}
+          onChangeMinutes={setZenMinutes}
+          onStart={startSession}
+          onBack={() => setPendingMode(null)}
         />
       )}
 
@@ -137,8 +224,7 @@ export default function MainApp() {
           />
         ) : (
           <StatisticsScreen
-            selectedApps={selectedApps}
-            selectedWebsites={selectedWebsites}
+            usage={usage}
             tab={statsTab}
             onChangeListTab={setStatsTab}
             onSelectItem={setDetailedStatsItem}
@@ -151,7 +237,7 @@ export default function MainApp() {
       {activeTab === 'settings' && (
         <SettingsScreen
           isBlocking={isBlocking}
-          onEmergencyUnblock={() => { window.electron?.stopBlocking(); setIsBlocking(false); }}
+          onEmergencyUnblock={stopSession}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}
@@ -181,6 +267,7 @@ export default function MainApp() {
       {showPopup && (
         <ManageAppsPopup
           onClose={() => setShowPopup(false)}
+          initialTab={popupTab}
           selectedApps={selectedApps}
           setSelectedApps={setSelectedApps}
           selectedWebsites={selectedWebsites}
@@ -190,7 +277,7 @@ export default function MainApp() {
       {showInsertKey && (
         <InsertKeyPopup
           onClose={() => setShowInsertKey(false)}
-          onInsert={handleKeyInserted}
+          onInsert={handleKeyVerified}
           isSuccess={isUsbInserted}
         />
       )}

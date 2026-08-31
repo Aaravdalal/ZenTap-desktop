@@ -82,13 +82,14 @@
   -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
-  transition: filter 0.15s ease;
+  /* Background only: a hover `filter` re-rasterises the label and reads as bold. */
+  transition: background-color 0.15s ease;
 }
 
 .hs-device-btn:hover {
-  filter: brightness(1.6);
+  background: #1f1f1f;
 }
 
 .hs-device-btn:active {
-  filter: brightness(2.2);
+  background: #333333;
 }

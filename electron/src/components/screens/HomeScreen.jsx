@@ -1,6 +1,7 @@
 import { Trophy, Clock, Flame } from 'lucide-react';
 import DesignStage, { DImg } from '../shared/DesignStage';
 import DesignBlockDock from '../shared/DesignBlockDock';
+import { APPS_DOCK, WEBSITES_DOCK } from '../shared/dockGeometry';
 import './HomeScreen.css';
 
 /*
@@ -15,32 +16,6 @@ const STATS = [
   { id: 'time', y: 449, label: 'Time', icon: <Clock {...ICON} /> },
   { id: 'streak', y: 731, label: 'Streak', icon: <Flame {...ICON} /> },
 ];
-
-const APPS_DOCK = {
-  title: 'Apps to Block:',
-  titlePos: { x: 1213, y: 161 },
-  countBox: { x: 1759, y: 144, w: 72, h: 74 },
-  plusBox: { x: 1852, y: 137, w: 88, h: 88 },
-  frame: { src: 'dock_apps', x: 1193, y: 254, w: 766, h: 246 },
-  cols: [1242, 1388, 1534, 1680, 1826],
-  rows: [280, 392],
-  slots: ['slot_a01', 'slot_a02', 'slot_a03', 'slot_a04', 'slot_a05',
-          'slot_a06', 'slot_a07', 'slot_a08', 'slot_a09', 'slot_a10'],
-  label: 'Apps to Block',
-};
-
-const WEBSITES_DOCK = {
-  title: 'Websites to Block:',
-  titlePos: { x: 1213, y: 574 },
-  countBox: { x: 1762, y: 558, w: 72, h: 74 },
-  plusBox: { x: 1858, y: 555, w: 84, h: 80 },
-  frame: { src: 'dock_websites', x: 1193, y: 692, w: 766, h: 246 },
-  cols: [1242, 1388, 1534, 1680, 1826],
-  rows: [717, 829],
-  slots: ['slot_b01', 'slot_b02', 'slot_b03', 'slot_b04', 'slot_b05',
-          'slot_b06', 'slot_b07', 'slot_b08', 'slot_b09', 'slot_b10'],
-  label: 'Websites to Block',
-};
 
 function formatTime(mins) {
   if (mins < 60) return `${mins}m`;

@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Suspense } from 'react';
-import InteractiveCard from './InteractiveCard';
 import './InsertKeyPopup.css';
 
 export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
@@ -76,11 +74,7 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
                </svg>
              </div>
            ) : (
-             <div className="insert-key-model">
-               <Suspense fallback={null}>
-                 <InteractiveCard scale={1.55} />
-               </Suspense>
-             </div>
+             <img className="insert-key-image" src="usb_insert_graphic.png" alt="Insert your Zen Key" draggable={false} />
            )}
         </div>
          

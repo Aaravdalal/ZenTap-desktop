@@ -1,27 +1,7 @@
-.main-app-shell {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--zt-page-bg);
-  -webkit-app-region: drag;
-}
-
-.main-app-card-area {
-  flex: 1;
-  min-height: 0;
-  background: var(--zt-card-bg);
-  border-radius: 0 0 var(--zt-radius-card) var(--zt-radius-card);
-  overflow: hidden;
-  position: relative;
-  -webkit-app-region: no-drag;
-}
-
 .main-app-window-controls {
   position: fixed;
-  /* Clear of the window's rounded corner, which scales with the design. */
-  top: calc(46px * var(--ds-scale, 0.6));
-  right: calc(56px * var(--ds-scale, 0.6));
+  top: 12px;
+  right: 14px;
   z-index: 200;
   display: flex;
   gap: 10px;

@@ -17,7 +17,7 @@ export default function HowToUseStep({ step, totalSteps, onBack, onContinue }) {
     <OnboardingShell title="How to use ZenTap?" onBack={onBack} progress={(step + 0.5) / totalSteps}>
       <img
         className="ht-image"
-        src="/HowToUse_Image.png"
+        src="HowToUse_Image.png"
         alt=""
         draggable={false}
         style={{ left: 114, top: 231, width: 921, height: 768 }}

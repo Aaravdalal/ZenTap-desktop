@@ -6,39 +6,3 @@
 .ds-back-hit:hover {
   background: rgba(0, 0, 0, 0.05);
 }
-
-.ds-mode-card {
-  position: absolute;
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 46px;
-  -webkit-app-region: no-drag;
-  transition: filter 0.15s ease, transform 0.15s ease;
-}
-
-.ds-mode-card:hover {
-  filter: brightness(1.06);
-}
-
-.ds-mode-card:active {
-  transform: scale(0.995);
-}
-
-.ds-mode-bg {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.ds-mode-el {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}

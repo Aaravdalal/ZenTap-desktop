@@ -8,7 +8,7 @@ export default function MessageStep({ step, totalSteps, onFinish }) {
     <OnboardingShell progress={(step + 0.5) / totalSteps}>
       <img
         className="ms-art"
-        src="/Focus_Image.png"
+        src="Focus_Image.png"
         alt=""
         draggable={false}
         style={{ left: 83, top: 86, width: 799, height: 949 }}

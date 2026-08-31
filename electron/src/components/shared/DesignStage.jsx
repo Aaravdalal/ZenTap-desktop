@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import DesignNav from './DesignNav';
 import { asset, useStageScale } from './designArtboard';
 import './DesignStage.css';
@@ -34,11 +33,10 @@ export function DHit({ x, y, w, h, className = '', ...rest }) {
  * to sit on the artboard but stay mounted while other screens are shown.
  */
 export function ArtboardLayer({ x, y, w, h, className = '', style, children }) {
-  const rootRef = useRef(null);
-  const scale = useStageScale(rootRef);
+  const scale = useStageScale();
 
   return (
-    <div className={`ds-layer ${className}`} ref={rootRef} style={style}>
+    <div className={`ds-layer ${className}`} style={style}>
       <div
         className="ds-stage"
         style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
@@ -51,12 +49,11 @@ export function ArtboardLayer({ x, y, w, h, className = '', style, children }) {
   );
 }
 
-export default function DesignStage({ activeTab, onChangeTab, children }) {
-  const rootRef = useRef(null);
-  const scale = useStageScale(rootRef);
+export default function DesignStage({ activeTab, onChangeTab, hideNav = false, children }) {
+  const scale = useStageScale();
 
   return (
-    <div className="ds-root" ref={rootRef}>
+    <div className="ds-root">
       <div
         className="ds-stage"
         style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
@@ -65,7 +62,7 @@ export default function DesignStage({ activeTab, onChangeTab, children }) {
         <DImg src="plate_gray" x={4} y={1003} w={2127} h={278} />
         <DImg src="plate_white_bottom" x={0} y={908} w={2135} h={205} />
         {children}
-        <DesignNav activeTab={activeTab} onChange={onChangeTab} />
+        {!hideNav && <DesignNav activeTab={activeTab} onChange={onChangeTab} />}
       </div>
     </div>
   );

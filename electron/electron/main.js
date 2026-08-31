@@ -14,6 +14,8 @@ import os from 'os';
 import fs from 'fs';
 import { readFile, writeFile } from 'fs/promises';
 import { getBlockerInstance } from './proxy/websiteBlockerProxy.js';
+import { usageTracker, processKey } from './usage/usageTracker.js';
+import { extensionBridge } from './extension/bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +33,10 @@ const USAGE_FILE = path.join(app.getPath('userData'), 'daily_usage.json');
 // Cache for instant loading
 let cachedAppList = [];
 let pkgMapCache = {};
+// exe name (lowercase) -> full path, from the registry's App Paths key. This is
+// how Windows itself finds Edge, Chrome, Firefox and friends, and it is the
+// fallback for Start-menu entries whose own path yields no icon.
+let appPathsCache = {};
 let missingIconBase64 = "";
 let discoveryPromise = null;
 
@@ -126,7 +132,30 @@ async function discoverApps() {
         });
     });
 
-    const [fsApps, uwpApps] = await Promise.all([fsScanPromise, uwpScanPromise]);
+    // Written line by line so the registry path's backslashes stay literal, and
+    // fed over stdin so cmd.exe never sees the quotes.
+    const appPathsPromise = new Promise((res) => {
+        // One line: PowerShell reading `-Command -` from stdin executes a
+        // multi-line block a line at a time and silently produces nothing.
+        const key = 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths';
+        const script = `$ErrorActionPreference='SilentlyContinue'; $out=@{}; Get-ChildItem '${key}' | ForEach-Object { $t=(Get-ItemProperty $_.PSPath).'(default)'; if ($t) { $out[$_.PSChildName]=$t.Trim([char]34) } }; $out | ConvertTo-Json -Compress\n`;
+        const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', '-'], { windowsHide: true });
+        let out = '';
+        child.stdout.on('data', d => { out += d; });
+        child.on('close', () => {
+            try { res(JSON.parse(out.trim() || '{}') || {}); } catch { res({}); }
+        });
+        child.on('error', () => res({}));
+        child.stdin.write(script);
+        child.stdin.end();
+    });
+
+    const [fsApps, uwpApps, appPaths] = await Promise.all([fsScanPromise, uwpScanPromise, appPathsPromise]);
+
+    appPathsCache = {};
+    for (const key in appPaths) {
+        appPathsCache[key.toLowerCase().replace(/\.exe$/, '')] = appPaths[key];
+    }
     
     const seen = new Set();
     const seenNames = new Set();
@@ -200,11 +229,9 @@ function createWindow() {
       width: 1280,
       height: 768,
       frame: false,
-    // Transparent so the CSS corner radius becomes the real window shape,
-    // matching the roundedness of the UI inside it.
-    transparent: true,
-    backgroundColor: '#00000000',
-    hasShadow: false,
+    // Ordinary opaque window: Windows draws its own (small) corner rounding and
+    // shadow, so the UI inside no longer has to fake the window shape.
+    backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -272,6 +299,16 @@ function createWindow() {
     console.log('Main window fully closed.');
   });
 
+  // A maximized window must not be draggable, so the renderer needs to know.
+  const sendMaximizeState = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-maximize-changed', mainWindow.isMaximized());
+    }
+  };
+  mainWindow.on('maximize', sendMaximizeState);
+  mainWindow.on('unmaximize', sendMaximizeState);
+  mainWindow.webContents.on('did-finish-load', sendMaximizeState);
+
   mainWindow.setMenu(null);
 }
 
@@ -290,6 +327,8 @@ app.on('before-quit', (e) => {
     if (blockingProcess) { try { blockingProcess.kill(); } catch (e) {} }
     if (webBlockingProcess) { try { webBlockingProcess.kill(); } catch (e) {} }
     if (usbMonitorProcess) { try { usbMonitorProcess.kill(); } catch (e) {} }
+    usageTracker.stop();
+    extensionBridge.stop();
 
     // Make sure the system proxy is never left pointing at a proxy server
     // that's about to disappear - otherwise the user loses all internet
@@ -308,6 +347,23 @@ app.on('before-quit', (e) => {
 
 const CONFIG_FILE = path.join(app.getPath('userData'), 'zentap_config.json');
 
+/** The saved config, read synchronously; {} when there isn't one yet. */
+function readConfig() {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    } catch (err) {
+        console.error('Read config failed:', err);
+    }
+    return {};
+}
+
+/** The block-list keyword a blocked hostname belongs to, e.g. m.youtube.com -> youtube.com */
+function matchWatchedSite(hostname) {
+    const host = String(hostname || '').toLowerCase();
+    const sites = (readConfig().selectedWebsites || []).map(w => w.keyword || w);
+    return sites.find(k => host.includes(String(k).toLowerCase().split('.')[0])) || host;
+}
+
 ipcMain.handle('load-config', async () => {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -321,6 +377,7 @@ ipcMain.handle('load-config', async () => {
 });
 
 ipcMain.on('save-config', (e, configData) => {
+    if (configData.selectedWebsites) usageTracker.setWatchedSites(configData.selectedWebsites);
     try {
         let existing = {};
         if (fs.existsSync(CONFIG_FILE)) {
@@ -375,6 +432,34 @@ app.whenReady().then(async () => {
     await websiteBlocker.healDanglingProxy();
     console.log("Calling loadUsage()...");
     await loadUsage();
+    usageTracker.load();
+    usageTracker.setWatchedSites(readConfig().selectedWebsites || []);
+    let lastReportedMinutes = -1;
+    usageTracker.onChange = () => {
+        const minutes = usageTracker.todayMinutes();
+        if (minutes === lastReportedMinutes) return;
+        lastReportedMinutes = minutes;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('usage-updated', minutes);
+        }
+    };
+    usageTracker.start();
+
+    extensionBridge.start({
+        getState: () => ({
+            blocking: isBlocking,
+            sites: (blockLists.web || []).map(w => (w.keyword || w).toString()),
+        }),
+        onUsage: (host, seconds) => usageTracker.recordSiteSeconds(host, seconds),
+        onBlocked: (host) => {
+            usageTracker.recordBlockEvent(matchWatchedSite(host));
+            if (!recentlyBlockedWeb.has(host)) {
+                recentlyBlockedWeb.add(host);
+                showNotificationOverlay(host);
+                setTimeout(() => recentlyBlockedWeb.delete(host), 4000);
+            }
+        },
+    });
     console.log("loadUsage() completed. Calling startUsageTracking() [skipped]...");
     // startUsageTracking();
     console.log("startUsageTracking() completed. Calling discoverApps()...");
@@ -413,6 +498,7 @@ app.on('window-all-closed', () => {
 
 // IPC Calls for blocking
 let isBlocking = false;
+let sessionEndsAt = null;
 let blockLists = { apps: [], web: [] };
 let blockInterval = null;
 let blockingProcess = null;
@@ -440,6 +526,7 @@ websiteBlocker.on('blocked', (info) => {
   try {
     if (!recentlyBlockedWeb.has(info.hostname)) {
       recentlyBlockedWeb.add(info.hostname);
+      usageTracker.recordBlockEvent(matchWatchedSite(info.hostname));
       showNotificationOverlay(info.hostname);
       setTimeout(() => recentlyBlockedWeb.delete(info.hostname), 4000);
     }
@@ -449,11 +536,40 @@ websiteBlocker.on('blocked', (info) => {
 });
 
 ipcMain.handle('get-screen-time', async () => {
-    return dailyUsageMinutes;
+    // The foreground probe is the finer-grained of the two counters.
+    return Math.max(dailyUsageMinutes, usageTracker.todayMinutes());
 });
 
 ipcMain.handle('get-total-screen-time', async () => {
     return totalUsageMinutes;
+});
+
+// Real per-app / per-site usage for the statistics screens. Keys are resolved
+// here because only the main process knows how an app maps to a process name.
+// The renderer's copy of "is a session running" is lost on reload/restart;
+// without this it can show "Zen Device" while a session is still blocking and
+// leave no way to stop it.
+ipcMain.handle('get-blocking-state', async () => ({
+    blocking: isBlocking,
+    endsAt: sessionEndsAt,
+    apps: blockLists.apps || [],
+    web: blockLists.web || [],
+    extension: extensionBridge.connectedBrowsers(),
+}));
+
+ipcMain.handle('get-usage-stats', async () => {
+    const config = readConfig();
+    const apps = (config.selectedApps || []).map(a => ({
+        key: resolveExeName(a),
+        name: a.name,
+        icon: a.icon || null,
+    }));
+    const sites = (config.selectedWebsites || []).map(w => ({
+        key: w.keyword || w,
+        name: w.keyword || w,
+        icon: w.icon || null,
+    }));
+    return usageTracker.summary({ apps, sites });
 });
 
 ipcMain.handle('get-installed-apps', async () => {
@@ -504,6 +620,7 @@ ipcMain.on('start-icon-stream', async (event) => {
     }
 
     // Process icons in background and push to UI
+    const iconless = [];
     for (const appItem of cachedAppList) {
         if (!mainWindow) break;
         
@@ -547,6 +664,13 @@ ipcMain.on('start-icon-stream', async (event) => {
                 if (iconImg && !iconImg.isEmpty()) icon = iconImg.toDataURL();
             }
 
+            // The shortcut itself carries the app's icon, and it still works
+            // when the target is missing (store stubs, MSI advertised links).
+            if (!icon && appItem.path.toLowerCase().endsWith('.lnk') && iconPath !== appItem.path) {
+                const lnkImg = await app.getFileIcon(appItem.path, { size: 'normal' }).catch(() => null);
+                if (lnkImg && !lnkImg.isEmpty()) icon = lnkImg.toDataURL();
+            }
+
             // UWP Manifest Extraction (Python Style)
             if (!icon) {
                 const familyName = appItem.path.split('!')[0];
@@ -566,7 +690,21 @@ ipcMain.on('start-icon-stream', async (event) => {
                                 path.join(installLoc, logoRel.replace(/\.png$/, '.scale-150.png')),
                                 path.join(installLoc, logoRel.replace(/\.png$/, '.scale-200.png'))
                             ];
-                            
+
+                            // Packages are free to ship only oddly-suffixed
+                            // variants (targetsize-24_altform-unplated and
+                            // friends), which is why Copilot and Quick Share
+                            // came up blank. Take whatever is actually there.
+                            try {
+                                const logoDir = path.join(installLoc, path.dirname(logoRel));
+                                const stem = path.basename(logoRel, '.png').toLowerCase();
+                                const siblings = fs.readdirSync(logoDir)
+                                    .filter(f => f.toLowerCase().startsWith(stem) && f.toLowerCase().endsWith('.png'))
+                                    // Biggest scale first, so the drawer gets a sharp icon.
+                                    .sort((a, b) => b.length - a.length);
+                                logoPaths.push(...siblings.map(f => path.join(logoDir, f)));
+                            } catch (e) { /* no such folder */ }
+
                             for (const lp of logoPaths) {
                                 if (fs.existsSync(lp)) {
                                     const buffer = await readFile(lp);
@@ -579,19 +717,49 @@ ipcMain.on('start-icon-stream', async (event) => {
                     }
                 }
             }
+            // Last resort: ask the registry where Windows thinks this app
+            // lives. This is what rescues entries like Microsoft Edge, whose
+            // Start-menu link points at a launcher with no icon of its own.
+            if (!icon) {
+                const candidates = [
+                    appItem.exeName,
+                    APP_MAP[appItem.name],   // "Microsoft Edge" -> msedge.exe
+                    appItem.name,
+                    appItem.name.replace(/\s+/g, ''),
+                ].filter(Boolean).map(n => n.toLowerCase().replace(/\.exe$/, ''));
+
+                for (const candidate of candidates) {
+                    const exePath = appPathsCache[candidate];
+                    if (!exePath || !fs.existsSync(exePath)) continue;
+                    const regImg = await app.getFileIcon(exePath, { size: 'normal' }).catch(() => null);
+                    if (regImg && !regImg.isEmpty()) {
+                        icon = regImg.toDataURL();
+                        if (!appItem.exeName) appItem.exeName = path.basename(exePath);
+                        break;
+                    }
+                }
+            }
         } catch (e) {}
 
         if (icon) {
             appItem.icon = icon;
-            mainWindow.webContents.send('app-icon-ready', { 
-                path: appItem.path, 
+            mainWindow.webContents.send('app-icon-ready', {
+                path: appItem.path,
                 icon,
                 exeName: appItem.exeName || null
             });
+        } else {
+            iconless.push(appItem.name);
         }
         
         // Extremely small delay to keep throughput high but UI responsive
         await new Promise(r => setTimeout(r, 2));
+    }
+
+    if (iconless.length) {
+        console.log(`[Icons] ${iconless.length} of ${cachedAppList.length} without an icon: ${iconless.join(', ')}`);
+    } else {
+        console.log(`[Icons] All ${cachedAppList.length} apps have an icon.`);
     }
 });
 
@@ -606,9 +774,21 @@ ipcMain.handle('fetch-favicon', async (event, domain) => {
     }
 });
 
-ipcMain.on('start-blocking', (e, { apps, web }) => {
+/** The process name a selected app maps to, e.g. { name: 'Spotify' } -> 'spotify'. */
+function resolveExeName(a) {
+  let target = a.exeName;
+  if (!target) {
+    const cached = cachedAppList.find(c => c.name === a.name || c.path === a.path);
+    if (cached && cached.exeName) target = cached.exeName;
+  }
+  if (!target) target = APP_MAP[a.name] || (a.name || '').toLowerCase().replace(/ /g, '') + '.exe';
+  return processKey(target);
+}
+
+ipcMain.on('start-blocking', (e, { apps, web, endsAt }) => {
   console.log('[Blocking] START received. Apps:', apps.map(a => a.name), 'Web:', web.map(w => w.keyword || w));
   isBlocking = true;
+  sessionEndsAt = endsAt || null;
   blockLists = { apps, web };
   recentlyBlocked.clear();
   
@@ -619,18 +799,16 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
   // --- APP BLOCKING ---
   // Look up the resolved exeName from cachedAppList if not already on the app object
   const appNames = apps
-    .map(a => {
-      // Try to find the resolved exe from the cache
-      let target = a.exeName;
-      if (!target) {
-        const cached = cachedAppList.find(c => c.name === a.name || c.path === a.path);
-        if (cached && cached.exeName) target = cached.exeName;
-      }
-      if (!target) target = APP_MAP[a.name] || a.name.toLowerCase().replace(/ /g, '') + '.exe';
-      return target.replace(/\.exe$/i, '').replace(/'/g, "''");
-    })
+    .map(a => resolveExeName(a).replace(/'/g, "''"))
     .filter(name => name.length > 0);
   console.log('[Blocking] Resolved app process names:', appNames);
+
+  // Everything on the list is unreachable for as long as the session runs.
+  usageTracker.setWatchedSites(web);
+  usageTracker.setBlocking(true, [
+    ...appNames,
+    ...(web || []).map(w => (w.keyword || w).toString()),
+  ]);
 
   if (appNames.length > 0) {
     const psScript = `$names = @('${appNames.join("','")}'); while($true) { $killed = Get-Process | Where-Object { $_.ProcessName -in $names }; if ($killed) { $killed | ForEach-Object { Write-Output $_.ProcessName }; $killed | Stop-Process -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 150 }`;
@@ -644,6 +822,7 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
                 if (trimmed.startsWith('DEBUG:')) continue;
                 if (!recentlyBlocked.has(trimmed)) {
                     recentlyBlocked.add(trimmed);
+                    usageTracker.recordBlockEvent(processKey(trimmed));
                     showNotificationOverlay(trimmed);
                     setTimeout(() => recentlyBlocked.delete(trimmed), 5000);
                 }
@@ -652,8 +831,15 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
     } catch (err) { console.error('App spawn error:', err); }
   }
 
-// --- WEB BLOCKING (Proxy-based) ---
-  if (web && web.length > 0) {
+// --- WEB BLOCKING ---
+  // The extension blocks in the browser, per navigation. It is both smoother
+  // and safer than the system proxy, which strands every browser on this
+  // machine if ZenTap dies without cleaning up - so when an extension has
+  // checked in recently, the proxy is left alone entirely.
+  if (web && web.length > 0 && extensionBridge.isConnected()) {
+    console.log('[WebBlock] Extension connected (' + extensionBridge.connectedBrowsers().join(', ') + ') - blocking in the browser, system proxy not touched.');
+    websiteBlocker.stop().catch(err => console.error('[WebBlock] Error stopping proxy:', err));
+  } else if (web && web.length > 0) {
     const domains = web.map(w => (w.keyword || w).toString().replace(/'/g, "''")).filter(k => k.length > 0);
 
     websiteBlocker.start(domains).then(success => {
@@ -673,6 +859,8 @@ ipcMain.on('start-blocking', (e, { apps, web }) => {
 
 ipcMain.on('stop-blocking', () => {
   isBlocking = false;
+  sessionEndsAt = null;
+  usageTracker.setBlocking(false);
   recentlyBlocked.clear();
   if (blockInterval) { clearInterval(blockInterval); blockInterval = null; }
   if (blockingProcess) { try { blockingProcess.kill(); } catch(e){} blockingProcess = null; }

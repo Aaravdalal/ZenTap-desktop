@@ -6,6 +6,30 @@
   -webkit-app-region: drag;
 }
 
+/*
+ * The artboard's grey band has to reach the window edges even when the window
+ * aspect doesn't match the design's, so it is painted on the root behind the
+ * stage. 362.5 = the band's top (1003) measured from the artboard centre.
+ */
+.ds-root::after,
+.ob-root::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: calc(50% + 362.5px * var(--ds-scale, 0.6));
+  background: #d9d9d9;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* A maximized window fills the screen already - dragging it is meaningless. */
+body.is-maximized .ds-root,
+body.is-maximized .ob-root {
+  -webkit-app-region: no-drag;
+}
+
 .ds-stage {
   position: absolute;
   left: 50%;
@@ -13,6 +37,7 @@
   width: 2135px;
   height: 1281px;
   transform-origin: center center;
+  z-index: 1;
 }
 
 .ds-el {

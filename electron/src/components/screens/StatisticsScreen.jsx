@@ -1,9 +1,13 @@
 import DesignStage, { DImg, DHit } from '../shared/DesignStage';
+import { formatDuration } from '../shared/formatDuration';
 import './StatisticsScreen.css';
 
 /*
  * Statistics screen — laid out on the 2135 x 1281 artboard measured from
  * UI References/Statistics.png.
+ *
+ * Everything here is real: `usage` comes from the main process, which samples
+ * the foreground window and keeps per-day totals for each app and site.
  */
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun'];
 const BAR_X = [144, 247, 350, 453, 555, 659, 763];
@@ -16,9 +20,7 @@ const ROW_Y = [345, 493, 641, 789];
 const COL_X = [1134, 1496];
 
 export default function StatisticsScreen({
-  selectedApps = [],
-  selectedWebsites = [],
-  weekly,
+  usage,
   tab = 'apps',
   onChangeListTab,
   onSelectItem,
@@ -26,14 +28,14 @@ export default function StatisticsScreen({
   onChangeTab,
   onBack,
 }) {
-  const data = weekly && weekly.length === 7 ? weekly : [30, 45, 60, 55, 85, 96, 82];
+  const data = usage?.weekly?.length === 7 ? usage.weekly : [0, 0, 0, 0, 0, 0, 0];
   const peak = Math.max(...data, 1);
   const avg = data.reduce((a, b) => a + b, 0) / data.length;
   const usable = AXIS_Y - CHART_TOP - 10;
   const barH = (v) => Math.max(4, Math.round((v / peak) * usable));
   const avgY = AXIS_Y - Math.round((avg / peak) * usable);
 
-  const items = tab === 'apps' ? selectedApps : selectedWebsites;
+  const items = (tab === 'apps' ? usage?.apps : usage?.sites) || [];
 
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
@@ -41,7 +43,7 @@ export default function StatisticsScreen({
       <DHit className="ds-back-hit" x={55} y={49} w={79} h={79} onClick={onBack} aria-label="Back" />
       <div className="ds-title">Statistics</div>
 
-      {/* Weekly usage chart */}
+      {/* Weekly usage chart — minutes of active screen time per day. */}
       <div className="st-axis-v" style={{ left: AXIS_X, top: CHART_TOP, height: AXIS_Y - CHART_TOP + 2 }} />
       <div className="st-axis-h" style={{ left: AXIS_X, top: AXIS_Y, width: 866 - AXIS_X }} />
       {data.map((v, i) => (
@@ -89,7 +91,10 @@ export default function StatisticsScreen({
             <span className="st-row-icon">
               {item?.icon && <img src={item.icon} alt="" draggable={false} />}
             </span>
-            <span className="st-row-name">{item ? (item.name || item.keyword) : 'Insert Name'}</span>
+            <span className="st-row-text">
+              <span className="st-row-name">{item ? item.name : 'Insert Name'}</span>
+              {item && <span className="st-row-time">{formatDuration(item.seconds)} today</span>}
+            </span>
           </button>
         );
       })}

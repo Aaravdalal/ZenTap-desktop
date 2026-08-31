@@ -6,6 +6,11 @@
   -webkit-app-region: drag;
 }
 
+/* The welcome step's grey band starts higher (845 on the artboard). */
+.ob-root.hero::after {
+  top: calc(50% + 204.5px * var(--ds-scale, 0.6));
+}
+
 .ob-track {
   position: absolute;
   border-radius: 999px;
