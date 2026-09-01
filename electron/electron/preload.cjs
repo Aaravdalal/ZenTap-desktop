@@ -23,6 +23,15 @@ contextBridge.exposeInMainWorld('electron', {
   getUsageStats: () => ipcRenderer.invoke('get-usage-stats'),
   getBlockingState: () => ipcRenderer.invoke('get-blocking-state'),
   getLinks: () => ipcRenderer.invoke('get-links'),
+  pickAvatar: () => ipcRenderer.invoke('pick-avatar'),
+  resetProfile: () => ipcRenderer.invoke('reset-profile'),
+  getOpenBlocked: (payload) => ipcRenderer.invoke('get-open-blocked', payload),
+  getBrowsers: () => ipcRenderer.invoke('get-browsers'),
+  openExtensionPage: (browserId) => ipcRenderer.invoke('open-extension-page', browserId),
+  onAppIconsComplete: (callback) => {
+    ipcRenderer.removeAllListeners('app-icons-complete');
+    ipcRenderer.on('app-icons-complete', () => callback());
+  },
   openExternal: (url) => ipcRenderer.send('open-external', url),
   onWindowMaximizeChange: (callback) => {
     ipcRenderer.removeAllListeners('window-maximize-changed');

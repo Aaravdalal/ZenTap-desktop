@@ -50,11 +50,11 @@ export default function OnboardingShell({ title, onBack, progress, hero = false,
     <div className={`ob-root ${hero ? 'hero' : ''}`}>
       <div
         className="ds-stage"
-        style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
+        style={{ transform: `translate(-50%, 0) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
       >
         <DImg src="plate_white" x={4} y={0} w={2127} h={1281} />
         {/* The welcome step's hero ends higher, so the band starts under it. */}
-        <DImg src="plate_gray" x={4} y={hero ? 845 : 1003} w={2127} h={hero ? 436 : 278} />
+        <DImg src="plate_gray" x={4} y={hero ? 843 : 1003} w={2127} h={hero ? 438 : 278} />
         {!hero && <DImg src="plate_white_bottom" x={0} y={908} w={2135} h={205} />}
 
         {onBack && (

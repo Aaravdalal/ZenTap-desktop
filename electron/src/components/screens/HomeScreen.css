@@ -1,8 +1,8 @@
 /* All values are artboard units (2135 x 1281); the stage scales them. */
 .hs-title {
   position: absolute;
-  left: 136px;
-  top: 82px;
+  left: 171px;
+  top: 65px;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 700;
   font-size: 50px;
@@ -42,6 +42,8 @@
   position: absolute;
   left: 140px;
   top: 46px;
+  max-width: 128px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', 'Roboto', sans-serif;
@@ -63,6 +65,10 @@
   font-size: 53px;
   color: #000000;
 }
+
+/* "12h 30m" does not fit where "0m" does. */
+.hs-stat-value.long { font-size: 38px; }
+.hs-stat-value.xlong { font-size: 31px; }
 
 .hs-device-btn {
   position: absolute;
@@ -92,4 +98,30 @@
 
 .hs-device-btn:active {
   background: #333333;
+}
+
+.hs-countdown {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  line-height: 1;
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+  transform: translateZ(0);
+}
+
+.hs-countdown-label {
+  font-weight: 500;
+  font-size: 30px;
+  color: #adadad;
+}
+
+.hs-countdown-value {
+  font-weight: 700;
+  font-size: 64px;
+  color: #000000;
+  font-variant-numeric: tabular-nums;
 }

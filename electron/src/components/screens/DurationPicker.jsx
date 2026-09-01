@@ -15,7 +15,7 @@ const COLUMNS = [
 const COL_W = 132;
 const COL_GAP = 20;
 const LEFT = 48;
-const TOP = 186;
+const TOP = 214;
 
 const parts = (seconds) => ({
   hours: Math.floor(seconds / 3600),
@@ -47,14 +47,14 @@ export default function DurationPicker({ seconds, onChange }) {
           onWheel={(e) => step(col.id, e.deltaY < 0 ? 1 : -1)}
         >
           <button type="button" className="dp-arrow" onClick={() => step(col.id, 1)} aria-label={`More ${col.id}`}>
-            <ChevronUp size={38} strokeWidth={2.6} />
+            <ChevronUp size={32} strokeWidth={2.8} />
           </button>
           <div className="dp-value">
             {String(value[col.id]).padStart(2, '0')}
             <span className="dp-unit">{col.unit}</span>
           </div>
           <button type="button" className="dp-arrow" onClick={() => step(col.id, -1)} aria-label={`Fewer ${col.id}`}>
-            <ChevronDown size={38} strokeWidth={2.6} />
+            <ChevronDown size={32} strokeWidth={2.8} />
           </button>
         </div>
       ))}

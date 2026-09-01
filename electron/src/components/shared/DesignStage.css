@@ -18,7 +18,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  top: calc(50% + 362.5px * var(--ds-scale, 0.6));
+  /* 278 = the band's height on the artboard, measured up from its bottom. */
+  top: calc(100% - 278px * var(--ds-scale, 0.6));
   background: #d9d9d9;
   z-index: 0;
   pointer-events: none;
@@ -30,13 +31,18 @@ body.is-maximized .ob-root {
   -webkit-app-region: no-drag;
 }
 
+/*
+ * Bottom-anchored, not centred: any leftover height goes above the artboard,
+ * where the design is empty anyway. Centring it split the leftover in two and
+ * pushed the tab bar off the bottom of its own grey band.
+ */
 .ds-stage {
   position: absolute;
   left: 50%;
-  top: 50%;
+  bottom: 0;
   width: 2135px;
   height: 1281px;
-  transform-origin: center center;
+  transform-origin: bottom center;
   z-index: 1;
 }
 

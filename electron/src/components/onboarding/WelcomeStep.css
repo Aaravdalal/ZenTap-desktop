@@ -1,3 +1,8 @@
+/*
+ * No radius here on purpose. The export is the card itself - rounded bottom
+ * corners with the grey band already showing through them - so clipping it
+ * again just shaved the corners and let white through.
+ */
 .ob-root .ob-hero {
-  border-radius: 0 0 96px 96px;
+  border-radius: 0;
 }

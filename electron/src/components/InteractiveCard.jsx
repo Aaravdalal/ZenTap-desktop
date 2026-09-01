@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, ContactShadows, Center, PresentationControls } from '@react-three/drei';
+import { useGLTF, Environment, Center } from '@react-three/drei';
 
 import { MODEL_URL } from './shared/modelUrl';
 import * as THREE from 'three';
@@ -13,14 +13,13 @@ function Model({ url, rotation, scale }) {
 }
 
 function Scene({ scale = 1 }) {
-  const LIMIT_X = Math.PI;  
-  const LIMIT_Y = Math.PI;  
+  // How far the key can be turned before it stops: enough to look at it from
+  // another angle, not enough to spin it end over end.
+  const LIMIT_X = 0.4;
+  const LIMIT_Y = 0.7;
   
   const BASE_X = Math.PI / 2; 
   const BASE_Y = -Math.PI / 2; 
-
-  // Keep the contact shadow just under the device as it scales.
-  const groundY = -0.3 * scale;
 
   const modelRef = useRef();
   const isDragging = useRef(false);
@@ -93,24 +92,6 @@ function Scene({ scale = 1 }) {
         </Center>
       </group>
 
-      {/* Outer soft shadow gradient */}
-      <ContactShadows 
-        position={[0, groundY, 0]} 
-        opacity={0.25} 
-        scale={12} 
-        blur={3} 
-        far={5} 
-        resolution={512}
-      />
-      {/* Inner dark core shadow */}
-      <ContactShadows 
-        position={[0, groundY, 0]} 
-        opacity={0.5} 
-        scale={8} 
-        blur={1} 
-        far={5} 
-        resolution={1024}
-      />
     </group>
   );
 }
@@ -118,10 +99,11 @@ function Scene({ scale = 1 }) {
 export default React.memo(function InteractiveCard({ scale = 1 }) {
   return (
     <div className="interactive-card-canvas" style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
-      <Canvas 
+      <Canvas
         key="zentap-canvas"
         camera={{ position: [0, -0.4, 5.2], fov: 45 }}
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+        resize={{ debounce: 0, scroll: false }}
         shadows
       >
         <Scene scale={scale} />

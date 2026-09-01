@@ -35,15 +35,31 @@ export function DHit({ x, y, w, h, className = '', ...rest }) {
 export function ArtboardLayer({ x, y, w, h, className = '', style, children }) {
   const scale = useStageScale();
 
+  /*
+   * Positioned with calc() rather than by scaling a stage: a transformed
+   * container reports its scaled size to react-three-fiber, which sized the
+   * canvas from it and left the model too large after the window had been
+   * maximised and restored. These are real pixels, so what it measures is what
+   * is on screen.
+   *
+   * The stage is centred horizontally and pinned to the bottom of the window,
+   * so 1067.5 (half the artboard) and 1281 (its height) do the conversion.
+   */
+  const px = (v) => `calc(${v}px * var(--ds-scale, 0.6))`;
+
   return (
     <div className={`ds-layer ${className}`} style={style}>
       <div
-        className="ds-stage"
-        style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
+        className="ds-layer-slot"
+        style={{
+          left: `calc(50% + ${x - 1067.5}px * var(--ds-scale, 0.6))`,
+          bottom: px(1281 - y - h),
+          width: px(w),
+          height: px(h),
+          visibility: scale ? 'visible' : 'hidden',
+        }}
       >
-        <div className="ds-layer-slot" style={{ left: x, top: y, width: w, height: h }}>
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
@@ -56,7 +72,7 @@ export default function DesignStage({ activeTab, onChangeTab, hideNav = false, c
     <div className="ds-root">
       <div
         className="ds-stage"
-        style={{ transform: `translate(-50%, -50%) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
+        style={{ transform: `translate(-50%, 0) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
       >
         <DImg src="plate_white" x={4} y={0} w={2127} h={1281} />
         <DImg src="plate_gray" x={4} y={1003} w={2127} h={278} />

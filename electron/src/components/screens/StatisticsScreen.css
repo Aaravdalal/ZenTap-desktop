@@ -128,3 +128,31 @@
   white-space: nowrap;
   -webkit-font-smoothing: antialiased;
 }
+
+.st-gridline {
+  position: absolute;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.st-tick {
+  position: absolute;
+  text-align: right;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  color: #8a8a8a;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+}
+
+.st-empty {
+  position: absolute;
+  text-align: center;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 28px;
+  color: #adadad;
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,102 @@
+.cd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-app-region: no-drag;
+  animation: cd-fade 0.18s ease-out;
+}
+
+.cd-card {
+  width: min(560px, 82vw);
+  padding: 34px 38px 32px;
+  border-radius: 46px;
+  /* The mauve from the reference, the same tone as the session cards. */
+  background: #9b9293;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  -webkit-app-region: no-drag;
+  animation: cd-rise 0.22s cubic-bezier(0.22, 1.1, 0.36, 1);
+}
+
+.cd-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.cd-mark {
+  width: 62px;
+  height: 55px;
+  flex: none;
+}
+
+.cd-title {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 52px;
+  line-height: 1;
+  color: #ff0000;
+  letter-spacing: 0.5px;
+}
+
+.cd-body {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 23px;
+  line-height: 1.42;
+  color: #000000;
+}
+
+.cd-body strong {
+  font-weight: 700;
+}
+
+.cd-actions {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 30px;
+}
+
+.cd-no,
+.cd-yes {
+  min-width: 148px;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+  transition: filter 0.15s ease;
+}
+
+.cd-no {
+  background: #d9d9d9;
+  color: #000000;
+}
+
+.cd-yes {
+  background: #ff0000;
+  color: #ffffff;
+}
+
+.cd-no:hover,
+.cd-yes:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes cd-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cd-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}

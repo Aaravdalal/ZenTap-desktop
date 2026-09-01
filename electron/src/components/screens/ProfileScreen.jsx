@@ -1,4 +1,4 @@
-import { Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Trash2, UserX } from 'lucide-react';
 import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import './ProfileScreen.css';
 
@@ -28,9 +28,9 @@ export default function ProfileScreen({
 }) {
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
-      <DImg src="back_button" x={55} y={22} w={79} h={79} />
-      <DHit className="ds-back-hit" x={55} y={22} w={79} h={79} onClick={onBack} aria-label="Back" />
-      <div className="ds-title" style={{ top: 38 }}>Profile</div>
+      <DImg src="back_button" x={55} y={49} w={79} h={79} />
+      <DHit className="ds-back-hit" x={55} y={49} w={79} h={79} onClick={onBack} aria-label="Back" />
+      <div className="ds-title">Profile</div>
 
       {/* Avatar */}
       <div className="pr-avatar" style={{ left: 134, top: 218, width: 632, height: 609 }}>
@@ -39,11 +39,11 @@ export default function ProfileScreen({
       <button
         type="button"
         className="pr-avatar-badge"
-        style={{ left: 684, top: 212, width: 101, height: 101 }}
+        style={{ left: 653, top: 179, width: 164, height: 164 }}
         onClick={onPickAvatar}
         aria-label="Change picture"
       >
-        <ImageIcon size={60} strokeWidth={2} />
+        <ImageIcon size={50} strokeWidth={2} />
       </button>
       {/* Type straight over it; empty shows the placeholder in grey. */}
       <input
@@ -74,7 +74,7 @@ export default function ProfileScreen({
 
       {/* Destructive actions */}
       <button type="button" className="pr-action" style={{ left: 1552, top: 592, width: 408, height: 114 }} onClick={onDeleteProfile}>
-        <span className="pr-action-dot" />
+        <span className="pr-action-dot"><UserX size={34} strokeWidth={2.2} color="#ff2d2d" /></span>
         <span className="pr-action-label">Delete Profile</span>
       </button>
       <button type="button" className="pr-action" style={{ left: 1552, top: 735, width: 408, height: 114 }} onClick={onUnpairKey}>

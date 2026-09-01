@@ -12,6 +12,8 @@ import SettingsScreen from './screens/SettingsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ManageAppsPopup from './ManageAppsPopup';
 import InsertKeyPopup from './InsertKeyPopup';
+import ConfirmDialog from './ConfirmDialog';
+import BrowserPickerDialog from './BrowserPickerDialog';
 import './MainApp.css';
 
 export default function MainApp() {
@@ -26,6 +28,13 @@ export default function MainApp() {
   const [isBlocking, setIsBlocking] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [memberSince, setMemberSince] = useState('');
+  const [avatar, setAvatar] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [openBlocked, setOpenBlocked] = useState(null);
+  const [showBrowsers, setShowBrowsers] = useState(false);
+  const askedForExtension = useRef(false);
+  // Set while the extension prompt is standing in the way of a session start.
+  const resumeStart = useRef(false);
   const [blockNotifications, setBlockNotifications] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
   const [usage, setUsage] = useState(null);
@@ -35,6 +44,7 @@ export default function MainApp() {
   const [pendingMode, setPendingMode] = useState(null);
   const [zenSeconds, setZenSeconds] = useState(30 * 60);
   const [sessionEndsAt, setSessionEndsAt] = useState(null);
+  const [sessionRemaining, setSessionRemaining] = useState(null);
 
   const isInitialMount = useRef(true);
 
@@ -55,6 +65,7 @@ export default function MainApp() {
       if (config.selectedWebsites) setSelectedWebsites(config.selectedWebsites);
       if (config.profileName) setProfileName(config.profileName);
       if (config.memberSince) setMemberSince(config.memberSince);
+      if (config.avatar) setAvatar(config.avatar);
       setBlockNotifications(!!config.blockNotifications);
     });
   }, []);
@@ -88,7 +99,54 @@ export default function MainApp() {
   // filling in over the next few seconds.
   useEffect(() => {
     window.electron?.startIconStream?.();
+
+    // The block list is saved with whatever icon existed when the app was
+    // picked, which for some apps was nothing at all. Once the scan finishes,
+    // take the icons it found.
+    window.electron?.onAppIconsComplete?.(() => {
+      window.electron?.getInstalledApps?.().then((installed) => {
+        const byPath = new Map((installed || []).map((a) => [a.path, a.icon]));
+        setSelectedApps((prev) => {
+          const next = prev.map((a) => (byPath.get(a.path) ? { ...a, icon: byPath.get(a.path) } : a));
+          const changed = next.some((a, i) => a.icon !== prev[i].icon);
+          if (changed) window.electron?.saveConfig?.({ selectedApps: next });
+          return changed ? next : prev;
+        });
+      }).catch(() => {});
+    });
   }, []);
+
+  // Favicons saved before the app started asking for 256px stay small forever
+  // otherwise. Measure what is stored and re-fetch only what is undersized.
+  useEffect(() => {
+    if (!selectedWebsites.length || !window.electron?.fetchFavicon) return;
+    let cancelled = false;
+
+    const widthOf = (src) => new Promise((resolve) => {
+      if (!src) return resolve(0);
+      const img = new Image();
+      img.onload = () => resolve(img.naturalWidth);
+      img.onerror = () => resolve(0);
+      img.src = src;
+      return undefined;
+    });
+
+    (async () => {
+      const upgraded = await Promise.all(selectedWebsites.map(async (site) => {
+        // Try once per site, ever: the favicon service returns whatever size it
+        // has, which is often under 256, and retrying every launch is waste.
+        if (site.iconHiRes || await widthOf(site.icon) >= 256) return site;
+        const icon = await window.electron.fetchFavicon(site.keyword).catch(() => null);
+        return { ...site, iconHiRes: true, ...(icon ? { icon } : {}) };
+      }));
+      if (cancelled) return;
+      const changed = upgraded.some((site, i) => site !== selectedWebsites[i]);
+      if (changed) setSelectedWebsites(upgraded);
+    })();
+
+    return () => { cancelled = true; };
+    // Runs once per list change; the guard above stops it looping on itself.
+  }, [selectedWebsites]);
 
   useEffect(() => {
     window.electron?.getScreenTime().then(setScreenTime);
@@ -115,6 +173,33 @@ export default function MainApp() {
     window.electron?.saveConfig?.({ profileName: value });
   };
 
+  /*
+   * Website blocking only works through the extension, so the first time a site
+   * is added without one connected, offer to install it. Once per run - it is a
+   * prompt, not a nag.
+   */
+  const offerExtension = async () => {
+    if (askedForExtension.current) return;
+    const state = await window.electron?.getBlockingState?.().catch(() => null);
+    if (state?.extension?.length) return;
+    askedForExtension.current = true;
+    setShowBrowsers(true);
+  };
+
+  const pickAvatar = async () => {
+    const picked = await window.electron?.pickAvatar?.().catch(() => null);
+    if (!picked) return;
+    setAvatar(picked);
+    window.electron?.saveConfig?.({ avatar: picked });
+  };
+
+  const deleteProfile = async () => {
+    setConfirmDelete(false);
+    await window.electron?.resetProfile?.().catch(() => {});
+    // Everything the renderer holds came from the files that just went away.
+    window.location.reload();
+  };
+
   const toggleBlockNotifications = (value) => {
     setBlockNotifications(value);
     // Main reads this when a session starts, and puts Windows back afterwards.
@@ -128,11 +213,26 @@ export default function MainApp() {
   }, []);
 
   // A Zen Mode session runs to the end of its timer, then releases itself.
+  // The same tick feeds the countdown on the Home screen.
   useEffect(() => {
-    if (!isBlocking || !sessionEndsAt) return;
-    const id = setInterval(() => {
-      if (Date.now() >= sessionEndsAt) stopSession();
-    }, 1000);
+    if (!isBlocking || !sessionEndsAt) return undefined;
+    const tick = () => {
+      const left = Math.max(0, Math.round((sessionEndsAt - Date.now()) / 1000));
+      if (left <= 0) {
+        stopSession();
+        return;
+      }
+      const hh = Math.floor(left / 3600);
+      const mm = Math.floor((left % 3600) / 60);
+      const ss = left % 60;
+      setSessionRemaining(
+        hh > 0
+          ? `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+          : `${mm}:${String(ss).padStart(2, '0')}`,
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [isBlocking, sessionEndsAt, stopSession]);
 
@@ -162,22 +262,46 @@ export default function MainApp() {
     stopSession();
   };
 
-  const startSession = () => {
-    if (selectedApps.length === 0 && selectedWebsites.length === 0) {
-      window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
-      return;
-    }
+  const beginBlocking = () => {
     const endsAt = pendingMode === 'zen' ? Date.now() + zenSeconds * 1000 : null;
     window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites, endsAt });
     setIsBlocking(true);
     setSessionEndsAt(endsAt);
     setPendingMode(null);
+    setOpenBlocked(null);
     setActiveTab('home');
+  };
+
+  const startSession = async () => {
+    if (selectedApps.length === 0 && selectedWebsites.length === 0) {
+      window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
+      return;
+    }
+    // Say what is about to be closed before closing it.
+    const open = await window.electron?.getOpenBlocked?.({ apps: selectedApps, web: selectedWebsites })
+      .catch(() => null);
+
+    if (selectedWebsites.length && open && !open.extension && !askedForExtension.current) {
+      askedForExtension.current = true;
+      resumeStart.current = true;
+      setShowBrowsers(true);
+      return;
+    }
+
+    if (open && (open.apps.length || open.browsers.length)) {
+      setOpenBlocked(open);
+      return;
+    }
+    beginBlocking();
   };
 
   const changeTab = (tab) => {
     setActiveTab(tab);
     setDetailedStatsItem(null);
+    // Never leave a half-chosen session behind: without this, coming back to
+    // the Session tab later drops you on the setup screen, which hides the
+    // tab bar and looks like being stuck.
+    setPendingMode(null);
   };
 
   const openDock = (tab = 'apps') => {
@@ -191,18 +315,6 @@ export default function MainApp() {
   return (
     <>
       <RippleCanvas />
-      {/* The device sits in the artboard slot where Homescreen.png shows it. */}
-      <ArtboardLayer
-        className={`global-model-container ${activeTab === 'home' ? 'visible' : 'hidden'}`}
-        x={118} y={380} w={940} h={420}
-      >
-        <SafeBoundary label="Zen device model">
-          <Suspense fallback={null}>
-            <InteractiveCard scale={2.338} />
-          </Suspense>
-        </SafeBoundary>
-      </ArtboardLayer>
-
       {/* Rebuilt 1:1 from the Figma export — these draw their own chrome and nav. */}
       {activeTab === 'home' && (
         <HomeScreen
@@ -210,6 +322,7 @@ export default function MainApp() {
           screenTime={screenTime}
           sessions={usage?.todaySessions ?? 0}
           streak={usage?.streak ?? 0}
+          sessionRemaining={isBlocking && sessionEndsAt ? sessionRemaining : null}
           isBlocking={isBlocking}
           onStartZen={startZenFlow}
           activeTab={activeTab}
@@ -229,6 +342,7 @@ export default function MainApp() {
         <SessionStartScreen
           {...dockProps}
           mode={pendingMode}
+          onChangeMode={setPendingMode}
           seconds={zenSeconds}
           onChangeSeconds={setZenSeconds}
           onStart={startSession}
@@ -274,12 +388,27 @@ export default function MainApp() {
           totalTime={usage ? Math.round(usage.totalSeconds / 60) : screenTime}
           name={profileName}
           onChangeName={saveProfileName}
+          avatar={avatar}
+          onPickAvatar={pickAvatar}
+          onDeleteProfile={() => setConfirmDelete(true)}
           memberSince={memberSince ? new Date(memberSince).toLocaleDateString() : '—'}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}
         />
       )}
+
+      {/* The device sits in the artboard slot where Homescreen.png shows it. */}
+      <ArtboardLayer
+        className={`global-model-container ${activeTab === 'home' ? 'visible' : 'hidden'}`}
+        x={47} y={308} w={700} h={420}
+      >
+        <SafeBoundary label="Zen device model">
+          <Suspense fallback={null}>
+            <InteractiveCard scale={1.742} />
+          </Suspense>
+        </SafeBoundary>
+      </ArtboardLayer>
 
       <div className="main-app-window-controls">
         <div className="win-btn minimize" onClick={() => window.electron?.minimizeApp?.()}>
@@ -301,8 +430,63 @@ export default function MainApp() {
           setSelectedApps={setSelectedApps}
           selectedWebsites={selectedWebsites}
           setSelectedWebsites={setSelectedWebsites}
+          onWebsiteAdded={offerExtension}
         />
       )}
+      {openBlocked && (
+        <ConfirmDialog
+          confirmLabel="Continue"
+          cancelLabel="Cancel"
+          onConfirm={beginBlocking}
+          onCancel={() => setOpenBlocked(null)}
+        >
+          {openBlocked.apps.length > 0 && (
+            <>
+              Starting this session will close{' '}
+              <strong>{openBlocked.apps.join(', ')}</strong>. Anything unsaved in
+              {openBlocked.apps.length > 1 ? ' them' : ' it'} will be lost.
+            </>
+          )}
+          {openBlocked.apps.length > 0 && openBlocked.browsers.length > 0 && <><br /><br /></>}
+          {openBlocked.browsers.length > 0 && (
+            <>
+              Any tabs on your block list will be closed in{' '}
+              <strong>{openBlocked.browsers.join(', ')}</strong>.
+            </>
+          )}
+          <br />
+          <br />
+          Continue?
+        </ConfirmDialog>
+      )}
+
+      {showBrowsers && (
+        <BrowserPickerDialog
+          onClose={() => {
+            setShowBrowsers(false);
+            // If this interrupted a session start, carry on with it.
+            if (resumeStart.current) {
+              resumeStart.current = false;
+              startSession();
+            }
+          }}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          onConfirm={deleteProfile}
+          onCancel={() => setConfirmDelete(false)}
+        >
+          This deletes <strong>all of your saved time</strong>, your profile picture, and
+          every setting, and unpairs your ZenKey. ZenTap will start again from
+          onboarding. This cannot be undone.
+          <br />
+          <br />
+          Are you sure?
+        </ConfirmDialog>
+      )}
+
       {showInsertKey && (
         <InsertKeyPopup
           onClose={() => setShowInsertKey(false)}

@@ -16,6 +16,7 @@ const START = { x: 326, y: 1142, w: 1483, h: 111 };
 
 export default function SessionStartScreen({
   mode,
+  onChangeMode,
   selectedApps,
   selectedWebsites,
   onOpenDock,
@@ -32,7 +33,13 @@ export default function SessionStartScreen({
       <DImg src="title" x={176} y={71} w={295} h={39} />
 
       {MODES.map((m) => (
-        <ModeCard key={m.id} mode={m} state={m.id === mode ? 'selected' : 'muted'}>
+        <ModeCard
+          key={m.id}
+          mode={m}
+          state={m.id === mode ? 'selected' : 'muted'}
+          onClick={m.id === mode ? undefined : () => onChangeMode?.(m.id)}
+          ariaLabel={`Switch to ${m.name}`}
+        >
           {m.id === 'zen' && m.id === mode && (
             /* Zen Mode locks the machine until the timer runs out, so the
                length has to be chosen before the session starts. */

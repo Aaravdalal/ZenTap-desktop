@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import net from 'net';
 import { ProxyServer } from './proxyServer.js';
 import { enableProxy, disableProxy, restoreProxySettings, getProxySettings } from './registryProxy.js';
 import { startProxyGuardian, stopProxyGuardian } from './proxyGuardian.js';
@@ -138,10 +139,35 @@ class WebsiteBlockerProxy extends EventEmitter {
    */
   async healDanglingProxy() {
     const current = await getProxySettings();
-    if (current.enabled && current.server === `127.0.0.1:${this.proxyPort}`) {
-      console.warn('[Blocker] Found a dangling proxy from a previous session - disabling it.');
-      await disableProxy();
+    if (!current.enabled || current.server !== `127.0.0.1:${this.proxyPort}`) return;
+
+    /*
+     * "Enabled" alone doesn't mean stranded: another ZenTap window may have a
+     * session running right now, and disabling its proxy would silently
+     * unblock it. Only heal when nothing is actually listening.
+     */
+    if (await this.isProxyPortLive()) {
+      console.log('[Blocker] A proxy is already serving this port - leaving it alone.');
+      return;
     }
+
+    console.warn('[Blocker] Found a dangling proxy from a previous session - disabling it.');
+    await disableProxy();
+  }
+
+  /** True if something is accepting connections on the proxy port. */
+  isProxyPortLive() {
+    return new Promise((resolve) => {
+      const socket = net.connect({ host: '127.0.0.1', port: this.proxyPort });
+      const done = (live) => {
+        socket.destroy();
+        resolve(live);
+      };
+      socket.setTimeout(700);
+      socket.once('connect', () => done(true));
+      socket.once('timeout', () => done(false));
+      socket.once('error', () => done(false));
+    });
   }
 
   /**

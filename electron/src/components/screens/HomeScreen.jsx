@@ -29,6 +29,7 @@ export default function HomeScreen({
   screenTime,
   sessions = 0,
   streak = 0,
+  sessionRemaining = null,
   isBlocking,
   onStartZen,
   activeTab,
@@ -44,7 +45,7 @@ export default function HomeScreen({
 
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
-      <DImg src="back_button" x={28} y={64} w={79} h={79} />
+      <DImg src="back_button" x={55} y={49} w={79} h={79} />
       <div className="hs-title">Home</div>
 
       {STATS.map(({ id, y, label, icon }) => (
@@ -52,10 +53,20 @@ export default function HomeScreen({
           <span className="hs-stat-pad">{icon}</span>
           <span className="hs-stat-text">
             <span className="hs-stat-label">{label}</span>
-            <span className="hs-stat-value">{values[id]}</span>
+            <span className={`hs-stat-value ${values[id].length > 6 ? 'xlong' : values[id].length > 4 ? 'long' : ''}`}>
+              {values[id]}
+            </span>
           </span>
         </div>
       ))}
+
+      {sessionRemaining != null && (
+        /* Sits above the device, where the Home screen is otherwise empty. */
+        <div className="hs-countdown" style={{ left: 47, top: 286, width: 700 }}>
+          <span className="hs-countdown-label">Zen session ends in</span>
+          <span className="hs-countdown-value">{sessionRemaining}</span>
+        </div>
+      )}
 
       <button type="button" className="hs-device-btn" onClick={onStartZen}>
         {isBlocking ? 'Stop Session' : 'Zen Device'}

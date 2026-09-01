@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeImage, shell, powerMonitor, screen, Tray, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, shell, powerMonitor, screen, Tray, Menu, dialog } from 'electron';
 
 // Global error handling to catch silent crashes ("Exit 0" or unhandled rejections)
 process.on('uncaughtException', (error) => {
@@ -229,6 +229,10 @@ function createWindow() {
       // Matches the 2135 x 1281 Figma artboard aspect so the design fills the frame.
       width: 1280,
       height: 768,
+      // Below about half the design's scale the labels stop being readable, so
+      // this is as small as the window goes.
+      minWidth: 960,
+      minHeight: 576,
       frame: false,
     // Ordinary opaque window: Windows draws its own (small) corner rounding and
     // shadow, so the UI inside no longer has to fake the window shape.
@@ -244,6 +248,13 @@ function createWindow() {
     icon: path.join(__dirname, '../public/app_icon.png')
   });
   console.log("createWindow: BrowserWindow instance created.");
+
+  /*
+   * Lock resizing to the design's shape. The UI is one fixed artboard scaled to
+   * fit, so any other aspect just adds empty margins - this keeps every size
+   * the user can drag to looking right, while maximise still fills the screen.
+   */
+  mainWindow.setAspectRatio(2135 / 1281);
 
   mainWindow.webContents.on('did-start-loading', () => {
     console.log("webContents: did-start-loading");
@@ -579,6 +590,153 @@ function readLinks() {
 
 ipcMain.handle('get-links', async () => readLinks());
 
+/** Process names with a window open right now, lowercased. */
+function runningProcessNames() {
+    return new Promise((resolve) => {
+        const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', '-'], { windowsHide: true });
+        let out = '';
+        child.stdout.on('data', d => { out += d; });
+        child.on('close', () => resolve(new Set(
+            out.split(/\r?\n/).map(n => n.trim().toLowerCase()).filter(Boolean),
+        )));
+        child.on('error', () => resolve(new Set()));
+        child.stdin.write('Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -ExpandProperty ProcessName -Unique\n');
+        child.stdin.end();
+    });
+}
+
+/**
+ * Which of the things about to be blocked are open right now, so the user can
+ * be told what a session is going to close.
+ */
+/*
+ * Browsers installed on this machine, for the "install the extension" prompt.
+ * App Paths is the same registry key Windows itself uses to find them, and it
+ * gives us an executable to launch and an icon to show.
+ */
+const BROWSER_CATALOG = [
+    { id: 'chrome', exe: 'chrome.exe', name: 'Chrome' },
+    { id: 'edge', exe: 'msedge.exe', name: 'Microsoft Edge' },
+    { id: 'firefox', exe: 'firefox.exe', name: 'Firefox' },
+    { id: 'brave', exe: 'brave.exe', name: 'Brave' },
+    { id: 'opera', exe: 'opera.exe', name: 'Opera' },
+    { id: 'vivaldi', exe: 'vivaldi.exe', name: 'Vivaldi' },
+];
+
+ipcMain.handle('get-browsers', async () => {
+    const found = [];
+    for (const browser of BROWSER_CATALOG) {
+        const exePath = appPathsCache[browser.exe.replace(/\.exe$/, '')];
+        if (!exePath || !fs.existsSync(exePath)) continue;
+        let icon = null;
+        try {
+            const img = await app.getFileIcon(exePath, { size: 'large' }).catch(() => null);
+            if (img && !img.isEmpty()) icon = img.toDataURL();
+        } catch (err) { /* the name alone will do */ }
+        found.push({ ...browser, path: exePath, icon });
+    }
+    return found;
+});
+
+/** Open the extension's install page in the browser the user picked. */
+ipcMain.handle('open-extension-page', async (e, browserId) => {
+    const browser = BROWSER_CATALOG.find(b => b.id === browserId);
+    const exePath = browser && appPathsCache[browser.exe.replace(/\.exe$/, '')];
+    const links = readLinks();
+    const url = links[`extension_${browserId}`] || links.extension_default;
+    if (!url) return false;
+    try {
+        if (exePath && fs.existsSync(exePath)) spawn(exePath, [url], { detached: true, stdio: 'ignore' }).unref();
+        else shell.openExternal(url);
+        return true;
+    } catch (err) {
+        console.error('[Extension] Could not open the install page:', err);
+        return false;
+    }
+});
+
+ipcMain.handle('get-open-blocked', async (e, { apps = [], web = [] } = {}) => {
+    const running = await runningProcessNames();
+
+    const openApps = apps
+        .filter(a => running.has(resolveExeName(a)))
+        .map(a => a.name);
+
+    /*
+     * Only the extension closes tabs. Without one the proxy simply refuses the
+     * connection and nothing is closed, so there is nothing to warn about.
+     */
+    const BROWSERS = { chrome: 'Chrome', msedge: 'Microsoft Edge', firefox: 'Firefox',
+                       brave: 'Brave', opera: 'Opera', vivaldi: 'Vivaldi' };
+    const openBrowsers = web.length && extensionBridge.isConnected()
+        ? Object.entries(BROWSERS).filter(([proc]) => running.has(proc)).map(([, name]) => name)
+        : [];
+
+    return { apps: openApps, browsers: openBrowsers, extension: extensionBridge.isConnected() };
+});
+
+/**
+ * Pick a profile picture. Returned as a data URL, scaled down first - a phone
+ * photo would otherwise sit in the config file at several megabytes.
+ */
+/**
+ * Wipe everything this user has: measured time, the block lists, the profile
+ * and every preference, and put onboarding back. Unpairing the ZenKey belongs
+ * here too once pairing exists.
+ */
+ipcMain.handle('reset-profile', async () => {
+    // Stop writing before deleting, or the trackers put their files straight back.
+    usageTracker.stop();
+    if (isBlocking) {
+        isBlocking = false;
+        sessionEndsAt = null;
+        usageTracker.setBlocking(false);
+        if (blockingProcess) { try { blockingProcess.kill(); } catch (e) {} blockingProcess = null; }
+        await websiteBlocker.stop().catch(err => console.error('[Reset] Error stopping proxy:', err));
+        setNotificationsMuted(false);
+    }
+
+    dailyUsageMinutes = 0;
+    totalUsageMinutes = 0;
+    usageTracker.data = { days: {} };
+
+    for (const file of [CONFIG_FILE, USAGE_FILE, path.join(app.getPath('userData'), 'zentap_usage.json')]) {
+        try {
+            if (fs.existsSync(file)) fs.unlinkSync(file);
+        } catch (err) {
+            console.error('[Reset] Could not remove', file, err);
+        }
+    }
+
+    usageTracker.setWatchedSites([]);
+    usageTracker.start();
+    console.log('[Reset] Profile cleared');
+    return true;
+});
+
+ipcMain.handle('pick-avatar', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose a profile picture',
+        properties: ['openFile'],
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] }],
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+
+    try {
+        const image = nativeImage.createFromPath(result.filePaths[0]);
+        if (image.isEmpty()) return null;
+        const { width, height } = image.getSize();
+        const longest = Math.max(width, height);
+        const sized = longest > 512
+            ? image.resize(width >= height ? { width: 512 } : { height: 512 })
+            : image;
+        return sized.toDataURL();
+    } catch (err) {
+        console.error('[Avatar] Could not read the image:', err);
+        return null;
+    }
+});
+
 ipcMain.on('open-external', (e, url) => {
     if (typeof url === 'string' && /^(https?|mailto):/i.test(url)) shell.openExternal(url);
 });
@@ -835,6 +993,11 @@ ipcMain.on('start-icon-stream', async (event) => {
         await new Promise(r => setTimeout(r, 2));
     }
 
+    // The docks draw from the saved block list, whose icons may predate this.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('app-icons-complete');
+    }
+
     if (iconless.length) {
         console.log(`[Icons] ${iconless.length} of ${cachedAppList.length} without an icon: ${iconless.join(', ')}`);
     } else {
@@ -960,11 +1123,16 @@ function showNotificationOverlay(appName) {
       .replace(/\s*\(restricted site\)\s*$/i, '')
       .replace(/\.exe$/i, '')
       .trim();
-  
-  // Capitalize first letter
-  if (cleanName.length > 0) {
-      cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-  }
+
+  /*
+   * The blocker works in process names; people don't. Trade "msedge" back for
+   * "Microsoft Edge" where the app list knows it, and otherwise leave the name
+   * exactly as it is - a hostname is not a sentence and shouldn't be
+   * capitalised.
+   */
+  const key = processKey(cleanName);
+  const known = cachedAppList.find(a => resolveExeName(a) === key);
+  if (known?.name) cleanName = known.name;
 
   if (notificationWindow) {
     try { notificationWindow.close(); } catch(e) {}

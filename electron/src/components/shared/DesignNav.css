@@ -27,22 +27,21 @@
   display: block;
   width: 100%;
   height: 100%;
-  /* Centre, so the whole triangle rocks rather than pivoting on its top edge
-     and waving only the tip. */
-  transform-origin: 50% 50%;
   -webkit-user-drag: none;
 }
 
+/* The whole marker slides across, then rocks side to side as it settles - no
+   rotation, so it never looks like one corner is flapping. */
 .ds-nav-indicator img.settling {
-  animation: ds-nav-settle 0.34s ease-out 0.16s both;
+  animation: ds-nav-settle 0.36s ease-out 0.14s both;
 }
 
 @keyframes ds-nav-settle {
-  0%   { transform: translateY(0)     rotate(0deg)    scale(1, 1); }
-  30%  { transform: translateY(-3px)  rotate(-4deg)   scale(0.97, 1.04); }
-  60%  { transform: translateY(1.5px) rotate(2.2deg)  scale(1.03, 0.98); }
-  82%  { transform: translateY(-0.5px) rotate(-1deg)  scale(0.99, 1.01); }
-  100% { transform: translateY(0)     rotate(0deg)    scale(1, 1); }
+  0%   { transform: translateX(0); }
+  28%  { transform: translateX(7px); }
+  55%  { transform: translateX(-4px); }
+  78%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

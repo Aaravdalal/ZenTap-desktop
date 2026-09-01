@@ -27,3 +27,17 @@ The icon row on the last onboarding step, left to right.
 - linkedin: https://linkedin.com/company/zentap
 - reddit: https://reddit.com/r/zentapofficial
 - x: https://x.com/ZenTapOfficial
+
+## Browser extension
+
+Where each browser's "add the extension" button goes. Until ZenTap is in the
+stores these point at the browser's own extensions page, where you can load
+the `extension/` folder with Developer mode on.
+
+- extension_default: https://zentap.app/extension
+- extension_chrome: https://chrome.google.com/webstore/detail/zentap
+- extension_edge: https://microsoftedge.microsoft.com/addons/detail/zentap
+- extension_firefox: https://addons.mozilla.org/firefox/addon/zentap
+- extension_brave: https://chrome.google.com/webstore/detail/zentap
+- extension_opera: https://chrome.google.com/webstore/detail/zentap
+- extension_vivaldi: https://chrome.google.com/webstore/detail/zentap

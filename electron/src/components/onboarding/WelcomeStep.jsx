@@ -24,7 +24,7 @@ export default function WelcomeStep({ onContinue, onNoKey }) {
         I don&rsquo;t have a ZenKey
       </button>
 
-      <div className="ob-terms" style={{ left: 326, top: 1215, width: 1483 }}>
+      <div className="ob-terms" style={{ left: 326, top: 1219, width: 1483 }}>
         By continuing, you agree to our <u onClick={() => openLink(links.terms)}>Terms</u> and{' '}
         <u onClick={() => openLink(links.privacyPolicy)}>Privacy Policy</u>
       </div>

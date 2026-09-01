@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import './ManageAppsPopup.css';
 
-export default function ManageAppsPopup({ onClose, initialTab = 'apps', selectedApps, setSelectedApps, selectedWebsites, setSelectedWebsites }) {
+export default function ManageAppsPopup({ onClose, initialTab = 'apps', selectedApps, setSelectedApps, selectedWebsites, setSelectedWebsites, onWebsiteAdded }) {
   // Opening from a dock's + lands you on that dock's list.
   const [activeTab, setActiveTab] = useState(initialTab); // 'apps' or 'websites'
   
@@ -81,6 +81,8 @@ export default function ManageAppsPopup({ onClose, initialTab = 'apps', selected
     }
     
     setSelectedWebsites([...selectedWebsites, { keyword: kw, icon: icon }]);
+    // Sites are blocked by the browser extension, so make sure there is one.
+    onWebsiteAdded?.();
     setWebInput('');
   };
 

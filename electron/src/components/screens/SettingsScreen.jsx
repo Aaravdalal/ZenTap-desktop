@@ -117,7 +117,7 @@ export default function SettingsScreen({
         <span className="se-chevron-slot" style={{ left: 788, top: 16 }}><Chevron /></span>
       </button>
 
-      <div className="se-footer" style={{ left: 1730, top: 1044, width: 323, height: 29 }}>
+      <div className="se-footer" style={{ left: 1730, top: 1044, width: 365, height: 40 }}>
         Designed with love in Sunnyvale, California
       </div>
     </DesignStage>

@@ -129,11 +129,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 15px;
+  border-radius: 20px;
   background: #f0f0f0;
   font-family: 'Inter', 'Roboto', sans-serif;
   font-weight: 400;
-  font-size: 19px;
+  font-size: 15px;
   color: #000000;
   white-space: nowrap;
   pointer-events: none;
