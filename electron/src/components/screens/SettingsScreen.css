@@ -7,7 +7,7 @@
   text-align: left;
   overflow: hidden;
   -webkit-app-region: no-drag;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .se-card:hover:not(:disabled):not(.static) {
@@ -86,29 +86,38 @@
   position: absolute;
   padding: 0;
   border: none;
-  border-radius: 999px;
-  background: #c9c9c9;
-  display: flex;
-  align-items: center;
+  background: transparent;
   -webkit-app-region: no-drag;
-  transition: background-color 0.2s ease;
+  transition: transform 0.09s ease;
 }
 
-.se-toggle.on {
-  background: #000000;
+.se-toggle-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.se-knob {
-  width: 47px;
-  height: 47px;
-  margin-left: 7px;
-  border-radius: 50%;
-  background: #ffffff;
-  transition: transform 0.2s ease;
+.se-toggle-track {
+  fill: #d8d8d8;
+  transition: fill 0.26s ease;
 }
 
-.se-toggle.on .se-knob {
-  transform: translateX(88px);
+.se-toggle.on .se-toggle-track {
+  fill: #ffcccf;
+}
+
+.se-toggle-knob {
+  transition: transform 0.3s cubic-bezier(0.32, 1.35, 0.5, 1);
+}
+
+.se-toggle.on .se-toggle-knob {
+  transform: translateX(84px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .se-toggle-track,
+  .se-toggle-knob { transition: none; }
 }
 
 .se-refer-art {

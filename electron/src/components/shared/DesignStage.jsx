@@ -65,6 +65,12 @@ export function ArtboardLayer({ x, y, w, h, className = '', style, children }) {
   );
 }
 
+/* Artboard geometry of the page chrome, measured from the reference renders. */
+export const CARD_BOTTOM = 1105;
+export const BAND_TOP = 1003;
+/** How far the card starts above the artboard; see .ds-card in the stylesheet. */
+export const CARD_OVERHANG = 600;
+
 export default function DesignStage({ activeTab, onChangeTab, hideNav = false, children }) {
   const scale = useStageScale();
 
@@ -74,9 +80,13 @@ export default function DesignStage({ activeTab, onChangeTab, hideNav = false, c
         className="ds-stage"
         style={{ transform: `translate(-50%, 0) scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}
       >
-        <DImg src="plate_white" x={4} y={0} w={2127} h={1281} />
-        <DImg src="plate_gray" x={4} y={1003} w={2127} h={278} />
-        <DImg src="plate_white_bottom" x={0} y={908} w={2135} h={205} />
+        {/*
+          * The page chrome, drawn rather than exported: a grey band with the
+          * white card over it. Measured from the references - the card's
+          * bottom edge sits at 1105 with a 100-unit corner radius.
+          */}
+        <div className="ds-band" style={{ top: BAND_TOP }} />
+        <div className="ds-card" style={{ height: CARD_BOTTOM + CARD_OVERHANG }} />
         {children}
         {!hideNav && <DesignNav activeTab={activeTab} onChange={onChangeTab} />}
       </div>

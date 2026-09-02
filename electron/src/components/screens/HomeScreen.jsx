@@ -1,5 +1,5 @@
 import { Trophy, Clock, Flame } from 'lucide-react';
-import DesignStage, { DImg } from '../shared/DesignStage';
+import DesignStage from '../shared/DesignStage';
 import DesignBlockDock from '../shared/DesignBlockDock';
 import { APPS_DOCK, WEBSITES_DOCK } from '../shared/dockGeometry';
 import './HomeScreen.css';
@@ -11,10 +11,13 @@ import './HomeScreen.css';
  */
 const ICON = { size: 42, strokeWidth: 1.8, color: '#000000' };
 
+/* A streak this long is worth showing off. */
+const STREAK_MILESTONE = 10;
+
 const STATS = [
-  { id: 'sessions', y: 167, label: 'Sessions', icon: <Trophy {...ICON} /> },
-  { id: 'time', y: 449, label: 'Time', icon: <Clock {...ICON} /> },
-  { id: 'streak', y: 731, label: 'Streak', icon: <Flame {...ICON} /> },
+  { id: 'sessions', y: 206, label: 'Sessions', icon: <Trophy {...ICON} /> },
+  { id: 'time', y: 488, label: 'Time', icon: <Clock {...ICON} /> },
+  { id: 'streak', y: 770, label: 'Streak', icon: <Flame {...ICON} /> },
 ];
 
 function formatTime(mins) {
@@ -43,13 +46,14 @@ export default function HomeScreen({
     streak: String(streak),
   };
 
+  const hotStreak = streak > STREAK_MILESTONE;
+
   return (
     <DesignStage activeTab={activeTab} onChangeTab={onChangeTab}>
-      <DImg src="back_button" x={55} y={49} w={79} h={79} />
       <div className="hs-title">Home</div>
 
       {STATS.map(({ id, y, label, icon }) => (
-        <div key={id} className="hs-stat" style={{ top: y }}>
+        <div key={id} className={`hs-stat ${id === 'streak' && hotStreak ? 'hot' : ''}`} style={{ top: y }}>
           <span className="hs-stat-pad">{icon}</span>
           <span className="hs-stat-text">
             <span className="hs-stat-label">{label}</span>
@@ -62,7 +66,7 @@ export default function HomeScreen({
 
       {sessionRemaining != null && (
         /* Sits above the device, where the Home screen is otherwise empty. */
-        <div className="hs-countdown" style={{ left: 47, top: 286, width: 700 }}>
+        <div className="hs-countdown" style={{ left: 47, top: 332, width: 700 }}>
           <span className="hs-countdown-label">Zen session ends in</span>
           <span className="hs-countdown-value">{sessionRemaining}</span>
         </div>

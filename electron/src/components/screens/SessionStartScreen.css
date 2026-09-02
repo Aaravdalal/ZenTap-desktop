@@ -14,7 +14,7 @@
   -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .ss-start:hover {

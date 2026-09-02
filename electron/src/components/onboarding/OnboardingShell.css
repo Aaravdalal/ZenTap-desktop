@@ -7,8 +7,49 @@
 }
 
 /* The welcome step's grey band starts higher (845 on the artboard). */
+.ob-root.hero {
+  background: #f0f0f0;
+}
+
+/* The card reaches above the artboard to keep its shadow off the top strip;
+   on these screens it has to be the hero's grey, not white. */
+.ob-root.hero .ds-card {
+  background: #f0f0f0;
+}
+
 .ob-root.hero::after {
   top: calc(100% - 438px * var(--ds-scale, 0.6));
+}
+
+/* The card edge and the band travelling between steps. */
+.ob-sliding {
+  /* Transform only: the stage is already scaled, so animating top/height made
+     the browser re-lay-out and re-rasterise the whole card every frame. */
+  transition: transform 0.5s cubic-bezier(0.33, 0.9, 0.28, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-sliding { transition: none; }
+}
+
+/* Leave onboarding. Red so it reads as "stop", not "back". */
+.ob-close {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 22px;
+  background: transparent;
+  color: #ff2d2d;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease, transform 0.09s ease;
+}
+
+.ob-close:hover {
+  background: rgba(255, 45, 45, 0.12);
 }
 
 .ob-track {
@@ -20,9 +61,12 @@
 
 .ob-track-fill {
   height: 100%;
+  width: 100%;
+  transform-origin: left center;
   border-radius: 999px;
   background: #f0f0f0;
-  transition: width 0.26s cubic-bezier(0.32, 0.9, 0.3, 1);
+  transition: transform 0.26s cubic-bezier(0.32, 0.9, 0.3, 1);
+  will-change: transform;
 }
 
 .ob-hero {
@@ -46,7 +90,7 @@
   color: #ffffff;
   -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
-  transition: filter 0.15s ease;
+  transition: filter 0.15s ease, transform 0.09s ease;
 }
 
 .ob-primary {
@@ -99,7 +143,7 @@
   color: #000000;
   -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.09s ease;
 }
 
 .ob-option:hover {

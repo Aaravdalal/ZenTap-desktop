@@ -44,4 +44,19 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  transition: transform 0.09s ease;
+}
+
+/* Everything clickable gives a little under the press, except things that
+   have their own motion (a switch flipping, the window's caption buttons). */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.se-toggle:active:not(:disabled) {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) { transform: none; }
 }

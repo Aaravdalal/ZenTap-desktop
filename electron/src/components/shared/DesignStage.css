@@ -46,6 +46,32 @@ body.is-maximized .ob-root {
   z-index: 1;
 }
 
+/* The grey band behind everything, and the white card that sits on it. */
+.ds-band {
+  position: absolute;
+  left: 0;
+  width: 2135px;
+  bottom: 0;
+  background: #d9d9d9;
+}
+
+.ds-card {
+  position: absolute;
+  left: 0;
+  /* Starts above the artboard so the shadow never lands on the strip that a
+     taller window leaves at the top. CARD_OVERHANG in DesignStage.jsx. */
+  top: -600px;
+  width: 2135px;
+  background: #ffffff;
+  border-radius: 0 0 100px 100px;
+  /*
+   * No offset, wide blur, low opacity. An opaque edge always hides the top
+   * half of its own shadow, so the best that can be done is to keep the step
+   * at the edge small and let the tail run long.
+   */
+  box-shadow: 0 0 160px rgba(0, 0, 0, 0.11);
+}
+
 .ds-el {
   position: absolute;
   pointer-events: none;

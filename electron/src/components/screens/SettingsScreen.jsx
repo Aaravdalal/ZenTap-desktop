@@ -56,8 +56,29 @@ export default function SettingsScreen({
           style={{ left: 702, top: 27, width: 149, height: 61 }}
           onClick={() => onToggleNotifications?.(!blockNotifications)}
           aria-pressed={blockNotifications}
+          aria-label="Block notifications during a session"
         >
-          <span className="se-knob" />
+          {/*
+            * Redrawn from the supplied artwork (track 149x62, the knob a
+            * rounded triangle 38x44 punched through it) so the knob can
+            * actually travel instead of the two states cross-fading.
+            */}
+          <svg className="se-toggle-svg" viewBox="0 0 149 62" aria-hidden="true">
+            <defs>
+              <mask id="se-toggle-hole">
+                <rect width="149" height="62" rx="31" fill="#ffffff" />
+                <path
+                  className="se-toggle-knob"
+                  d="M25 18 L45 31 L25 44 Z"
+                  fill="#000000"
+                  stroke="#000000"
+                  strokeWidth="18"
+                  strokeLinejoin="round"
+                />
+              </mask>
+            </defs>
+            <rect className="se-toggle-track" width="149" height="62" rx="31" mask="url(#se-toggle-hole)" />
+          </svg>
         </button>
       </div>
 
@@ -117,7 +138,12 @@ export default function SettingsScreen({
         <span className="se-chevron-slot" style={{ left: 788, top: 16 }}><Chevron /></span>
       </button>
 
-      <div className="se-footer" style={{ left: 1730, top: 1044, width: 365, height: 40 }}>
+      {/*
+        * Pulled in from the reference's own position: there the pill's
+        * bottom-right corner pokes about 2 units past the card's rounded
+        * corner. This clears it.
+        */}
+      <div className="se-footer" style={{ left: 1694, top: 1036, width: 365, height: 40 }}>
         Designed with love in Sunnyvale, California
       </div>
     </DesignStage>

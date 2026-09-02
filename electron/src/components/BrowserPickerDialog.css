@@ -51,7 +51,7 @@
   background: #f0f0f0;
   text-align: left;
   -webkit-app-region: no-drag;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .bp-browser:hover {
@@ -97,7 +97,7 @@
   font-family: inherit;
   font-size: 21px;
   -webkit-app-region: no-drag;
-  transition: filter 0.15s ease;
+  transition: filter 0.15s ease, transform 0.09s ease;
 }
 
 .bp-done:hover { filter: brightness(1.25); }

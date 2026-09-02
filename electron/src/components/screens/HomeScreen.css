@@ -73,7 +73,7 @@
 .hs-device-btn {
   position: absolute;
   left: 80px;
-  top: 812px;
+  top: 858px;
   width: 619px;
   height: 124px;
   border: none;
@@ -89,7 +89,7 @@
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
   /* Background only: a hover `filter` re-rasterises the label and reads as bold. */
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .hs-device-btn:hover {
@@ -124,4 +124,18 @@
   font-size: 64px;
   color: #000000;
   font-variant-numeric: tabular-nums;
+}
+
+/* Past the milestone the flame and its count go pink. */
+.hs-stat.hot .hs-stat-pad {
+  background: #ffdfe0;
+}
+
+.hs-stat.hot .hs-stat-pad svg {
+  color: #ff6b73;
+  stroke: #ff6b73;
+}
+
+.hs-stat.hot .hs-stat-value {
+  color: #ff6b73;
 }

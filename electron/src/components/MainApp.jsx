@@ -13,6 +13,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import ManageAppsPopup from './ManageAppsPopup';
 import InsertKeyPopup from './InsertKeyPopup';
 import ConfirmDialog from './ConfirmDialog';
+import WindowControls from './shared/WindowControls';
 import BrowserPickerDialog from './BrowserPickerDialog';
 import './MainApp.css';
 
@@ -45,6 +46,8 @@ export default function MainApp() {
   const [zenSeconds, setZenSeconds] = useState(30 * 60);
   const [sessionEndsAt, setSessionEndsAt] = useState(null);
   const [sessionRemaining, setSessionRemaining] = useState(null);
+  // A session can only be set up after the ZenKey has been checked from Home.
+  const [keyVerified, setKeyVerified] = useState(false);
 
   const isInitialMount = useRef(true);
 
@@ -210,6 +213,7 @@ export default function MainApp() {
     window.electron?.stopBlocking();
     setIsBlocking(false);
     setSessionEndsAt(null);
+    setKeyVerified(false);
   }, []);
 
   // A Zen Mode session runs to the end of its timer, then releases itself.
@@ -240,6 +244,7 @@ export default function MainApp() {
     setShowInsertKey(false);
     window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: 0.5, y: 0.5 } }));
     // The key only unlocks the flow; the session itself is set up next.
+    setKeyVerified(true);
     setPendingMode(null);
     setDetailedStatsItem(null);
     setActiveTab('session');
@@ -269,6 +274,7 @@ export default function MainApp() {
     setSessionEndsAt(endsAt);
     setPendingMode(null);
     setOpenBlocked(null);
+    setKeyVerified(false);
     setActiveTab('home');
   };
 
@@ -293,6 +299,17 @@ export default function MainApp() {
       return;
     }
     beginBlocking();
+  };
+
+  const chooseMode = (mode) => {
+    if (!keyVerified) {
+      window.electron?.showError(
+        'ZenTap',
+        'Press Zen Device on the Home screen and insert your ZenKey to start a session.',
+      );
+      return;
+    }
+    setPendingMode(mode);
   };
 
   const changeTab = (tab) => {
@@ -332,7 +349,7 @@ export default function MainApp() {
       {activeTab === 'session' && !pendingMode && (
         <SessionScreen
           {...dockProps}
-          onSelectMode={setPendingMode}
+          onSelectMode={chooseMode}
           activeTab={activeTab}
           onChangeTab={changeTab}
           onBack={() => changeTab('home')}
@@ -401,7 +418,7 @@ export default function MainApp() {
       {/* The device sits in the artboard slot where Homescreen.png shows it. */}
       <ArtboardLayer
         className={`global-model-container ${activeTab === 'home' ? 'visible' : 'hidden'}`}
-        x={47} y={308} w={700} h={420}
+        x={47} y={354} w={700} h={420}
       >
         <SafeBoundary label="Zen device model">
           <Suspense fallback={null}>
@@ -410,29 +427,8 @@ export default function MainApp() {
         </SafeBoundary>
       </ArtboardLayer>
 
-      <div className="main-app-window-controls">
-        <div className="win-btn minimize" onClick={() => window.electron?.minimizeApp?.()}>
-          <svg viewBox="0 0 10 1" width="10" height="1"><path d="M0,0h10v1H0z" fill="currentColor" /></svg>
-        </div>
-        <div className="win-btn maximize" onClick={() => window.electron?.maximizeApp?.()}>
-          <svg viewBox="0 0 10 10" width="10" height="10"><path d="M0,0v10h10V0H0z M1,1h8v8H1V1z" fill="currentColor" /></svg>
-        </div>
-        <div className="win-btn close" onClick={() => window.electron?.closeApp?.()}>
-          <svg viewBox="0 0 10 10" width="10" height="10"><path d="M10,1L9,0L5,4L1,0L0,1l4,4L0,9l1,1l4-4l4,4l1-1L6,5L10,1z" fill="currentColor" /></svg>
-        </div>
-      </div>
+      <WindowControls />
 
-      {showPopup && (
-        <ManageAppsPopup
-          onClose={() => setShowPopup(false)}
-          initialTab={popupTab}
-          selectedApps={selectedApps}
-          setSelectedApps={setSelectedApps}
-          selectedWebsites={selectedWebsites}
-          setSelectedWebsites={setSelectedWebsites}
-          onWebsiteAdded={offerExtension}
-        />
-      )}
       {openBlocked && (
         <ConfirmDialog
           confirmLabel="Continue"
@@ -485,6 +481,18 @@ export default function MainApp() {
           <br />
           Are you sure?
         </ConfirmDialog>
+      )}
+
+      {showPopup && (
+        <ManageAppsPopup
+          onClose={() => setShowPopup(false)}
+          initialTab={popupTab}
+          selectedApps={selectedApps}
+          setSelectedApps={setSelectedApps}
+          selectedWebsites={selectedWebsites}
+          setSelectedWebsites={setSelectedWebsites}
+          onWebsiteAdded={offerExtension}
+        />
       )}
 
       {showInsertKey && (

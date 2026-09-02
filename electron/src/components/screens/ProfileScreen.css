@@ -1,8 +1,16 @@
 .pr-avatar {
   position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 60px;
   background: #f0f0f0;
   overflow: hidden;
+}
+
+/* Stand-in until a picture is chosen. */
+.pr-avatar-empty {
+  color: #c9c9c9;
 }
 
 .pr-avatar img {
@@ -40,7 +48,7 @@
   color: #000000;
   -webkit-app-region: no-drag;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .pr-name::placeholder {
@@ -114,7 +122,7 @@
   border-radius: 57px;
   background: #f0f0f0;
   -webkit-app-region: no-drag;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .pr-action:hover {

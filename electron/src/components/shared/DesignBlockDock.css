@@ -39,7 +39,7 @@
 
 .ds-dock-hit {
   border-radius: 60px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .ds-dock-hit:hover {
@@ -48,7 +48,7 @@
 
 .ds-plus-hit {
   border-radius: 20px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.09s ease;
 }
 
 .ds-plus-hit:hover {

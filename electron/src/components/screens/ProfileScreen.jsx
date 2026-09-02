@@ -1,4 +1,4 @@
-import { Image as ImageIcon, Trash2, UserX } from 'lucide-react';
+import { Image as ImageIcon, Trash2, UserX, User } from 'lucide-react';
 import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import './ProfileScreen.css';
 
@@ -33,8 +33,10 @@ export default function ProfileScreen({
       <div className="ds-title">Profile</div>
 
       {/* Avatar */}
-      <div className="pr-avatar" style={{ left: 134, top: 218, width: 632, height: 609 }}>
-        {avatar && <img src={avatar} alt="" draggable={false} />}
+      <div className="pr-avatar" style={{ left: 134, top: 218, width: 632, height: 631 }}>
+        {avatar
+          ? <img src={avatar} alt="" draggable={false} />
+          : <User className="pr-avatar-empty" size={300} strokeWidth={1.4} />}
       </div>
       <button
         type="button"
@@ -48,7 +50,7 @@ export default function ProfileScreen({
       {/* Type straight over it; empty shows the placeholder in grey. */}
       <input
         className="pr-name"
-        style={{ left: 124, top: 862, width: 632 }}
+        style={{ left: 124, top: 884, width: 632 }}
         value={name}
         placeholder="ZenTap User"
         maxLength={28}

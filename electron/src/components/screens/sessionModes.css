@@ -12,10 +12,6 @@ button.ds-mode-card:hover {
   filter: brightness(1.06);
 }
 
-button.ds-mode-card:active {
-  transform: scale(0.995);
-}
-
 /* Which of the two the session is about to run. The reference has no state for
    this, so the chosen card simply sits a shade darker than the other. */
 .ds-mode-card.selected {

@@ -7,11 +7,12 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-         setIsClosing(true);
-         setTimeout(() => onInsert(), 300);
+        setIsClosing(true);
+        setTimeout(() => onInsert(), 300);
       }, 1500);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isSuccess, onInsert]);
 
   const handleClose = () => {
@@ -20,64 +21,35 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
     setTimeout(() => onClose(), 300);
   };
 
-  const handleBypassClick = () => {
-    if (isSuccess) return;
-    
-    // Bypass USB check and proceed directly
-    setIsClosing(true);
-    
-    // Immediately initialize Zen mode
-    setTimeout(() => {
-      onInsert();
-      
-      // Notify main process to skip USB requirement
-      if (window.electron?.invoke) {
-        window.electron.invoke('usb-bypass-activated');
-      }
-    }, 0);
-  };
-
   return (
     <>
       <div className={`insert-key-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}></div>
       <div className={`insert-key-popup ${isClosing ? 'closing' : ''}`}>
-        {/* Bypass button for testing - top left corner */}
-        {!isSuccess && (
-          <button 
-            className="insert-key-bypass" 
-            onClick={handleBypassClick}
-            title="Testing Bypass - Skip USB requirement">
-            ∞
-          </button>
-        )}
-        
         {!isSuccess && <button className="insert-key-close" onClick={handleClose}>✕</button>}
-        
+
         <div className="insert-key-header">
-           <h2 className="insert-key-title">{isSuccess ? "Zen-Key Connected" : "Insert Zen-Key"}</h2>
-           <p className="insert-key-subtitle">
-             {isSuccess 
-               ? "Initializing Zen mode..." 
-               : "Plug the Zen Key into your computer"}
-           </p>
+          <h2 className="insert-key-title">{isSuccess ? 'Zen-Key Connected' : 'Insert Zen-Key'}</h2>
+          <p className="insert-key-subtitle">
+            {isSuccess ? 'Initializing Zen mode…' : 'Plug the Zen Key into your computer'}
+          </p>
         </div>
-         
+
         <div className="insert-key-icon-container">
-           {isSuccess ? (
-             <div className="google-pay-checkmark-wrapper">
-               <svg className="gpay-circle-svg" width="140" height="140" viewBox="0 0 140 140">
-                 <circle className="gpay-circle-outline" cx="70" cy="70" r="60" stroke="#1A73E8" strokeWidth="8" fill="none" strokeDasharray="400" strokeDashoffset="400" strokeLinecap="round" transform="rotate(-90 70 70)" />
-               </svg>
-               <div className="gpay-circle-fill"></div>
-               <svg className="gpay-check-svg" width="140" height="140" viewBox="0 0 140 140">
-                 <path className="gpay-check-path" d="M 40 72 L 60 92 L 100 45" stroke="#FFFFFF" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="100" strokeDashoffset="100" />
-               </svg>
-             </div>
-           ) : (
-             <img className="insert-key-image" src="usb_insert_graphic.png" alt="Insert your Zen Key" draggable={false} />
-           )}
+          {isSuccess ? (
+            <div className="google-pay-checkmark-wrapper">
+              <svg className="gpay-circle-svg" width="140" height="140" viewBox="0 0 140 140">
+                <circle className="gpay-circle-outline" cx="70" cy="70" r="60" stroke="#1A73E8" strokeWidth="8" fill="none" strokeDasharray="400" strokeDashoffset="400" strokeLinecap="round" transform="rotate(-90 70 70)" />
+              </svg>
+              <div className="gpay-circle-fill"></div>
+              <svg className="gpay-check-svg" width="140" height="140" viewBox="0 0 140 140">
+                <path className="gpay-check-path" d="M 40 72 L 60 92 L 100 45" stroke="#FFFFFF" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="100" strokeDashoffset="100" />
+              </svg>
+            </div>
+          ) : (
+            <img className="insert-key-image" src="usb_insert_graphic.png" alt="Insert your Zen Key" draggable={false} />
+          )}
         </div>
-         
+
         {!isSuccess && <button className="insert-key-cancel" onClick={handleClose}>Cancel</button>}
       </div>
     </>

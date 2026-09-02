@@ -113,7 +113,13 @@ export default function DesignNav({ activeTab, onChange }) {
       {active && (
         <div
           className="ds-nav-indicator"
-          style={{ left: x, top: INDICATOR.y, width: INDICATOR.w, height: INDICATOR.h }}
+          style={{
+            left: markerX(TABS[0].id),
+            top: INDICATOR.y,
+            width: INDICATOR.w,
+            height: INDICATOR.h,
+            transform: `translateX(${x - markerX(TABS[0].id)}px)`,
+          }}
         >
           {/* Keyed on the tab so the settle restarts on each move, and only
               once it is actually moving - no wobble on first paint. */}

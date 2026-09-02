@@ -62,7 +62,7 @@
   background-color: #f2f2f2;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s, transform 0.09s ease;
 }
 
 .tab-btn.active {
@@ -156,7 +156,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: all 0.2s;
+  transition: all 0.2s, transform 0.09s ease;
 }
 
 .app-checkbox.checked {

@@ -34,11 +34,12 @@ export default function ConfirmDialog({
         <div className="cd-head">
           <svg className="cd-mark" viewBox="0 0 100 88" aria-hidden="true">
             <path
-              d="M50 4 L96 84 H4 Z"
+              d="M50 22 L79 72 H21 Z"
               fill="#ff383c"
               stroke="#ff383c"
-              strokeWidth="16"
+              strokeWidth="34"
               strokeLinejoin="round"
+              strokeLinecap="round"
             />
           </svg>
           <span className="cd-title">{title}</span>

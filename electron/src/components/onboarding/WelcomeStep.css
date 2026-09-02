@@ -6,3 +6,33 @@
 .ob-root .ob-hero {
   border-radius: 0;
 }
+
+/*
+ * The returning screen's taller panel. The artwork sits at the top at its own
+ * size; below it the panel is the same flat grey the artwork ends on, so the
+ * join is invisible and the rounded corners belong to the panel.
+ */
+.ob-hero-panel {
+  position: absolute;
+  overflow: hidden;
+  background: #f0f0f0;
+  border-radius: 0 0 100px 100px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ob-hero-panel img {
+  display: block;
+  position: absolute;
+  left: 0;
+  /* Centred in the taller panel; the rows above and below it are the same flat
+     grey the artwork ends on, so there is no seam either side. */
+  top: 128px;
+  width: 100%;
+  /* The export carries its own rounded bottom corners; crop them off so the
+     panel's corners are the only ones. Those rows are flat grey anyway. */
+  height: 745px;
+  object-fit: cover;
+  object-position: top center;
+  -webkit-user-drag: none;
+}

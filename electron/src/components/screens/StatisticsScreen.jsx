@@ -63,8 +63,14 @@ export default function StatisticsScreen({
   const yFor = (minutes) => AXIS_Y - Math.round((minutes / axisMax) * usable);
   const barH = (v) => Math.max(v > 0 ? 4 : 0, AXIS_Y - yFor(v));
 
-  // The mean of the seven days, which is what the dashed line marks.
-  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+  /*
+   * Averaged over the days that actually have time on them, today included.
+   * Dividing by a flat seven buried the line near zero on a fresh install,
+   * where the six days before it are empty only because nothing was recorded
+   * yet - not because nothing was used.
+   */
+  const measured = data.filter((v) => v > 0);
+  const avg = measured.length ? measured.reduce((a, b) => a + b, 0) / measured.length : 0;
   const avgY = yFor(avg);
 
   const axisLabel = (minutes) => {

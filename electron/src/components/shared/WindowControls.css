@@ -1,0 +1,58 @@
+.win-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+/* 46 x 32 is the Windows 11 caption button; the glyph inside is 10px. */
+.win-controls .win-btn {
+  width: 46px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  /* Grey ground: the screens behind these are white. */
+  background: #f0f0f0;
+  color: #4a4a4a;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.win-controls .win-btn:first-child {
+  border-bottom-left-radius: 14px;
+}
+
+.win-controls .win-btn:hover {
+  background: #e4e4e4;
+  color: #000000;
+}
+
+.win-controls .win-btn.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* On the grey welcome screens the ground flips to white. */
+.win-controls.light .win-btn {
+  background: #ffffff;
+}
+
+.win-controls.light .win-btn:hover {
+  background: #f4f4f4;
+  color: #000000;
+}
+
+.win-controls.light .win-btn.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* These are chrome, not content: they should not give under the press. */
+.win-controls .win-btn:active {
+  transform: none;
+}
