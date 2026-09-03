@@ -36,6 +36,9 @@ export default function MainApp() {
   const askedForExtension = useRef(false);
   // Set while the extension prompt is standing in the way of a session start.
   const resumeStart = useRef(false);
+  // Where the Start Session button was when it was pressed, so the wave can
+  // leave from it even if a dialog interrupts on the way.
+  const rippleOrigin = useRef(null);
   const [blockNotifications, setBlockNotifications] = useState(false);
   const [screenTime, setScreenTime] = useState(0);
   const [usage, setUsage] = useState(null);
@@ -242,7 +245,6 @@ export default function MainApp() {
 
   const handleKeyVerified = () => {
     setShowInsertKey(false);
-    window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: { x: 0.5, y: 0.5 } }));
     // The key only unlocks the flow; the session itself is set up next.
     setKeyVerified(true);
     setPendingMode(null);
@@ -268,6 +270,7 @@ export default function MainApp() {
   };
 
   const beginBlocking = () => {
+    window.dispatchEvent(new CustomEvent('ripple-trigger', { detail: rippleOrigin.current || {} }));
     const endsAt = pendingMode === 'zen' ? Date.now() + zenSeconds * 1000 : null;
     window.electron?.startBlocking({ apps: selectedApps, web: selectedWebsites, endsAt });
     setIsBlocking(true);
@@ -278,7 +281,8 @@ export default function MainApp() {
     setActiveTab('home');
   };
 
-  const startSession = async () => {
+  const startSession = async (origin) => {
+    if (origin) rippleOrigin.current = origin;
     if (selectedApps.length === 0 && selectedWebsites.length === 0) {
       window.electron?.showError('ZenTap', 'Select apps or add website keywords first.');
       return;

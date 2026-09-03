@@ -1,14 +1,11 @@
+/*
+ * No tint on press: the pill underneath is artwork, and a translucent black
+ * rectangle over it read as a dark block with the pill's own edge showing
+ * around it. The press scale is the feedback.
+ */
 .ds-nav-hit {
   border-radius: 34px;
-  transition: background-color 0.15s ease, transform 0.09s ease;
-}
-
-.ds-nav-hit:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.ds-nav-hit:active {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
 }
 
 /*

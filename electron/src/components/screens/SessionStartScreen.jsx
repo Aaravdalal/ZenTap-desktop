@@ -55,7 +55,11 @@ export default function SessionStartScreen({
         type="button"
         className="ss-start"
         style={{ left: START.x, top: START.y, width: START.w, height: START.h }}
-        onClick={onStart}
+        onClick={(e) => {
+          // Hand the button's centre up, so the wave starts from it.
+          const box = e.currentTarget.getBoundingClientRect();
+          onStart({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+        }}
       >
         Start Session
       </button>

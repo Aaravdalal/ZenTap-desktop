@@ -40,13 +40,26 @@ function App() {
     return <div className="app-container" />
   }
 
+  /*
+   * The app is mounted underneath the welcome screen rather than after it. By
+   * the time Continue is pressed the 3D device has been fetched, parsed and
+   * had its shaders compiled, the app icons have streamed in, and the config
+   * and usage figures are loaded - so the Home screen is simply uncovered
+   * instead of being built.
+   */
+  const warming = phase === 'welcome'
+
   return (
     <div className="app-container">
       {phase === 'onboarding' && (
         <OnboardingFlow onComplete={() => setPhase('main')} />
       )}
-      {phase === 'welcome' && <WelcomeStep returning onContinue={() => setPhase('main')} />}
-      {phase === 'main' && <MainApp />}
+      {(phase === 'main' || warming) && <MainApp />}
+      {warming && (
+        <div className="app-warming">
+          <WelcomeStep returning onContinue={() => setPhase('main')} />
+        </div>
+      )}
     </div>
   )
 }

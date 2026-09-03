@@ -1,4 +1,5 @@
-import { Image as ImageIcon, Trash2, UserX, User } from 'lucide-react';
+import { Image as ImageIcon, Trash2 } from 'lucide-react';
+import PersonIcon from '../shared/PersonIcon';
 import DesignStage, { DImg, DHit } from '../shared/DesignStage';
 import './ProfileScreen.css';
 
@@ -36,7 +37,7 @@ export default function ProfileScreen({
       <div className="pr-avatar" style={{ left: 134, top: 218, width: 632, height: 631 }}>
         {avatar
           ? <img src={avatar} alt="" draggable={false} />
-          : <User className="pr-avatar-empty" size={300} strokeWidth={1.4} />}
+          : <PersonIcon className="pr-avatar-empty" size={300} />}
       </div>
       <button
         type="button"
@@ -76,7 +77,7 @@ export default function ProfileScreen({
 
       {/* Destructive actions */}
       <button type="button" className="pr-action" style={{ left: 1552, top: 592, width: 408, height: 114 }} onClick={onDeleteProfile}>
-        <span className="pr-action-dot"><UserX size={34} strokeWidth={2.2} color="#ff2d2d" /></span>
+        <span className="pr-action-dot"><PersonIcon className="pr-action-person" size={34} /></span>
         <span className="pr-action-label">Delete Profile</span>
       </button>
       <button type="button" className="pr-action" style={{ left: 1552, top: 735, width: 408, height: 114 }} onClick={onUnpairKey}>

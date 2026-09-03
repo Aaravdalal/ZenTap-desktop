@@ -15,6 +15,13 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
     return undefined;
   }, [isSuccess, onInsert]);
 
+  /* TESTING ONLY - delete this handler and the button below to remove. */
+  const handleBypass = () => {
+    if (isSuccess) return;
+    setIsClosing(true);
+    setTimeout(() => onInsert(), 0);
+  };
+
   const handleClose = () => {
     if (isSuccess) return;
     setIsClosing(true);
@@ -25,6 +32,13 @@ export default function InsertKeyPopup({ onClose, onInsert, isSuccess }) {
     <>
       <div className={`insert-key-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}></div>
       <div className={`insert-key-popup ${isClosing ? 'closing' : ''}`}>
+        {/* TESTING ONLY - skips the ZenKey check. */}
+        {!isSuccess && (
+          <button className="insert-key-bypass" onClick={handleBypass} title="Testing: skip the ZenKey check">
+            ∞
+          </button>
+        )}
+
         {!isSuccess && <button className="insert-key-close" onClick={handleClose}>✕</button>}
 
         <div className="insert-key-header">

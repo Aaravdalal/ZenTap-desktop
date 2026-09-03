@@ -16,3 +16,13 @@
 .global-model-container.hidden {
   display: none;
 }
+
+/*
+ * Covers the app while it warms up behind the welcome screen. Above the
+ * window controls (z-index 200) so only the welcome screen's own are visible.
+ */
+.app-warming {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+}

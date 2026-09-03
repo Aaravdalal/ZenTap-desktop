@@ -8,9 +8,13 @@
   overflow: hidden;
 }
 
-/* Stand-in until a picture is chosen. */
+/* Stand-in until a picture is chosen: the same glyph as the Profile tab. */
 .pr-avatar-empty {
   color: #c9c9c9;
+}
+
+.pr-action-person {
+  color: #ff2d2d;
 }
 
 .pr-avatar img {
